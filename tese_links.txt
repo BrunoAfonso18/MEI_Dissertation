@@ -1,0 +1,13 @@
+https://www.sentic.net/ontosenticnet.pdf
+https://www.sciencedirect.com/science/article/pii/S0165011415002377
+https://arxiv.org/pdf/2004.11639
+https://www.tandfonline.com/doi/full/10.1080/10447318.2020.1741118
+https://www.researchgate.net/profile/Colin-Ware/publication/224285723_Information_Visualization_Perception_for_Design_Second_Edition/links/53ce92780cf24377a65dd024/Information-Visualization-Perception-for-Design-Second-Edition.pdf?origin=publication_detail&_tp=eyJjb250ZXh0Ijp7ImZpcnN0UGFnZSI6InB1YmxpY2F0aW9uIiwicGFnZSI6InB1YmxpY2F0aW9uRG93bmxvYWQiLCJwcmV2aW91c1BhZ2UiOiJwdWJsaWNhdGlvbiJ9fQ&__cf_chl_tk=wFFHHH9RkCC6MlgDN.lt09SUP6I4Rnd1ZnYFdsT.R24-1774629176-1.0.1.1-pTzw7e9rf19hf.v3K5hNe3fEECaW_IaizW1zYs7YhEs
+https://link.springer.com/article/10.1007/s11042-019-7250-z
+https://www.cs.uic.edu/~liub/FBS/SentimentAnalysis-and-OpinionMining.pdf
+https://www.researchgate.net/publication/338916787_Survey_on_Visual_Sentiment_Analysis
+https://ieeexplore.ieee.org/document/8722967
+https://towardsdatascience.com/real-time-interactive-sentiment-analysis-in-python/   -> absa protótipo
+https://arxiv.org/pdf/1403.3185
+https://personal.eur.nl/frasincar/papers/AIR2023/air2023.pdf
+https://arxiv.org/pdf/2203.01054

@@ -1,0 +1,7 @@
+python
+customtkinter
+opencv-python
+torch
+transformers
+pytest // test smiles
+pillow
