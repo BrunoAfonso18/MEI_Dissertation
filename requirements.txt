@@ -7,3 +7,6 @@ pytest // test smiles
 pillow
 
 pip install fastapi uvicorn transformers torch scikit-fuzzy pandas numpy redis streamlit
+
+pip install transformers torch spacy
+python -m spacy download pt_core_news_sm
