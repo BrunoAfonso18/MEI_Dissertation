@@ -11,3 +11,5 @@ https://towardsdatascience.com/real-time-interactive-sentiment-analysis-in-pytho
 https://arxiv.org/pdf/1403.3185
 https://personal.eur.nl/frasincar/papers/AIR2023/air2023.pdf
 https://arxiv.org/pdf/2203.01054
+
+https://aclanthology.org/2025.emnlp-main.128.pdf

@@ -1,0 +1,300 @@
+O desempenho é excelente, mas a bateria poderia durar mais.
+Gosto muito do ecrã, embora o teclado não seja muito confortável.
+A bateria dura bastante, mas o computador aquece demasiado.
+O design é bonito e leve, mas os altifalantes são fracos.
+O teclado é ótimo, porém o trackpad não responde sempre bem.
+O ecrã tem boas cores, mas o brilho não é suficiente no exterior.
+A performance é muito rápida e o arranque é quase instantâneo.
+A bateria não dura tanto quanto esperava.
+O computador é silencioso e rápido, mas a webcam é fraca.
+O ecrã é fantástico para ver filmes.
+A qualidade de construção é excelente e parece muito robusto.
+Não gostei do teclado, mas o desempenho compensa.
+O portátil é leve e fácil de transportar.
+A ventoinha faz muito barulho durante jogos.
+O armazenamento é rápido, mas o espaço é limitado.
+O ecrã é nítido, porém a taxa de atualização é baixa.
+A bateria surpreendeu-me pela positiva.
+O computador é rápido, mas aquece demasiado quando compilo código.
+A webcam não é boa para videoconferências.
+O teclado retroiluminado é muito útil à noite.
+A bateria não é má, mas também não é excelente.
+O desempenho em multitarefa é ótimo.
+O ecrã não tem boas cores, embora seja suficientemente brilhante.
+O design é elegante e moderno.
+A qualidade dos altifalantes é melhor do que esperava.
+O computador não é muito silencioso.
+O trackpad é preciso e responde bem.
+O teclado é confortável para longas sessões de escrita.
+A bateria dura pouco quando uso programas pesados.
+O desempenho geral é muito sólido.
+O ecrã é bom, mas não impressiona.
+O portátil é rápido, mas o carregador é grande demais.
+Não gostei do som dos altifalantes.
+A construção parece barata apesar do preço elevado.
+O sistema arranca muito rapidamente.
+O teclado não é tão silencioso quanto eu queria.
+O ecrã tem ótima resolução.
+A bateria dura um dia inteiro de trabalho.
+O computador é rápido e leve.
+A webcam não tem boa qualidade em ambientes escuros.
+O design é simples mas elegante.
+O desempenho em jogos é razoável.
+A ventoinha quase não se ouve.
+O teclado é pequeno para as minhas mãos.
+O ecrã não reflete muito a luz.
+A bateria poderia ser melhor.
+O armazenamento SSD é muito rápido.
+O computador não aquece tanto quanto esperava.
+O som é alto, mas não muito claro.
+O portátil é leve mas parece frágil.
+O desempenho é excelente para programação.
+A bateria não dura muito quando estou a editar vídeo.
+O ecrã é ótimo para trabalhar com gráficos.
+O teclado não é desconfortável, mas também não é incrível.
+A construção é sólida e bem acabada.
+O computador é rápido, mas o preço é elevado.
+Os altifalantes são surpreendentemente bons.
+O ecrã não é muito brilhante.
+O trackpad funciona muito bem.
+O teclado tem boa resposta ao toque.
+A bateria dura menos do que anunciam.
+O portátil é bonito e elegante.
+A ventoinha faz barulho quando o CPU está em carga.
+O desempenho geral é consistente.
+O ecrã tem cores vivas e contraste bom.
+O som não é muito alto.
+O computador não é pesado.
+A bateria é suficiente para um dia normal.
+O teclado é confortável.
+O ecrã poderia ser maior.
+O portátil é rápido e silencioso.
+O design não é muito original.
+O armazenamento é rápido mas limitado.
+O ecrã não é ideal para edição de fotografia.
+A bateria é melhor do que a do meu antigo portátil.
+O desempenho em tarefas simples é ótimo.
+O computador aquece quando jogo.
+A webcam não é péssima, mas podia ser melhor.
+O teclado é bom para programar.
+O ecrã é muito nítido.
+O computador não é tão rápido quanto eu esperava.
+A bateria dura bastante quando só navego na internet.
+O ecrã tem excelente definição.
+O teclado não tem boa iluminação.
+O design é bonito mas escorrega facilmente.
+O som é claro e equilibrado.
+O portátil é leve e compacto.
+A ventoinha não faz muito barulho.
+O desempenho é ótimo para multitarefa.
+A bateria não dura mais que 5 horas.
+O ecrã é bom, mas não extraordinário.
+O teclado tem teclas muito pequenas.
+O computador é rápido e eficiente.
+O armazenamento SSD melhora muito a performance.
+O portátil aquece na parte inferior.
+O ecrã tem bons ângulos de visão.
+O som não tem muito grave.
+O design é simples mas elegante.
+O teclado não é ruim, apenas diferente.
+A bateria dura mais do que pensei.
+O desempenho em programação é excelente.
+O ecrã é brilhante e nítido.
+O computador não é muito silencioso.
+O teclado é confortável para escrever.
+A bateria poderia durar mais.
+O portátil é leve e fácil de transportar.
+O som é aceitável.
+O ecrã não é muito brilhante.
+O computador é rápido.
+A webcam é fraca.
+O teclado tem boa resposta.
+O design é moderno.
+A bateria não dura muito.
+O desempenho é bom.
+O ecrã é grande e confortável.
+O computador não aquece muito.
+O som é bom para música.
+O teclado é silencioso.
+A bateria dura um dia.
+O ecrã tem boa resolução.
+O portátil é rápido mas caro.
+A bateria é boa para trabalho.
+O ecrã não tem boas cores.
+O teclado é agradável.
+O computador é silencioso.
+O som é fraco.
+A bateria não dura muito em jogos.
+O ecrã é muito bonito.
+O teclado é pequeno.
+O desempenho é sólido.
+O computador não pesa muito.
+O ecrã reflete um pouco a luz.
+A bateria dura bastante.
+O teclado não é ruim.
+O portátil é rápido.
+O som não é muito alto.
+O design é elegante.
+O ecrã é bom para filmes.
+O computador aquece um pouco.
+A bateria poderia melhorar.
+O desempenho é excelente.
+O ecrã é brilhante.
+O teclado não é confortável.
+A bateria dura bem.
+O portátil é silencioso.
+O som é bom.
+O ecrã não tem grande contraste.
+O computador é leve.
+O teclado responde bem.
+A bateria não dura muito.
+O desempenho em jogos é bom.
+O ecrã é grande.
+O computador aquece.
+O teclado é bom.
+O som é médio.
+A bateria dura bastante.
+O ecrã é bonito.
+O portátil é rápido.
+O teclado não é silencioso.
+A bateria poderia ser melhor.
+O ecrã tem ótima qualidade.
+O desempenho é consistente.
+O computador não é pesado.
+O teclado é confortável.
+A bateria não dura muito.
+O som é claro.
+O ecrã é nítido.
+O portátil é rápido.
+O teclado é bom para escrever.
+A bateria é razoável.
+O computador é silencioso.
+O ecrã é bom para trabalhar.
+O teclado não é ruim.
+O som é aceitável.
+A bateria dura bastante.
+O portátil é leve.
+O ecrã tem boas cores.
+O teclado é ótimo.
+O computador não aquece muito.
+A bateria poderia durar mais.
+O desempenho é rápido.
+O ecrã é bom.
+O teclado é confortável.
+A bateria não dura muito.
+O som é bom.
+O portátil é leve.
+O ecrã é brilhante.
+O teclado responde bem.
+A bateria dura bastante.
+O computador é silencioso.
+O ecrã não é perfeito.
+O teclado é pequeno.
+O desempenho é sólido.
+A bateria poderia melhorar.
+O som é claro.
+O portátil é rápido.
+O ecrã é grande.
+O teclado é confortável.
+A bateria não dura muito em jogos.
+O computador é bom.
+O ecrã é fantástico.
+O teclado não é confortável.
+A bateria dura bem.
+O som é fraco.
+O computador é rápido.
+O ecrã não é brilhante.
+O teclado é bom.
+A bateria poderia ser melhor.
+O portátil é silencioso.
+O desempenho é ótimo.
+O ecrã tem boa definição.
+O teclado responde bem.
+A bateria dura bastante.
+O computador é leve.
+O som é bom.
+O ecrã não é muito grande.
+O teclado é confortável.
+A bateria não dura muito.
+O desempenho é rápido.
+O portátil é elegante.
+O ecrã é bom para trabalhar.
+O teclado é pequeno.
+A bateria dura bem.
+O som não é forte.
+O computador é rápido.
+O ecrã é brilhante.
+O teclado não é ruim.
+A bateria poderia durar mais.
+O portátil é leve.
+O desempenho é bom.
+O ecrã é bonito.
+O teclado é confortável.
+A bateria não dura muito.
+O som é aceitável.
+O computador é rápido.
+O ecrã tem boa qualidade.
+O teclado responde bem.
+A bateria dura bastante.
+O portátil é silencioso.
+O desempenho é sólido.
+O ecrã é ótimo.
+O teclado não é confortável.
+A bateria dura bem.
+O som é fraco.
+O computador é rápido.
+O ecrã não é muito brilhante.
+O teclado é bom.
+A bateria poderia melhorar.
+O portátil é leve.
+O desempenho é bom.
+O ecrã é bonito.
+O teclado é confortável.
+A bateria não dura muito.
+O som é razoável.
+O computador é rápido.
+O ecrã tem boa resolução.
+O teclado responde bem.
+A bateria dura bastante.
+O portátil é silencioso.
+O desempenho é sólido.
+O ecrã é grande.
+O teclado é pequeno.
+A bateria dura bem.
+O som não é forte.
+O computador é rápido.
+O ecrã é brilhante.
+O teclado não é ruim.
+A bateria poderia durar mais.
+O portátil é leve.
+O desempenho é bom.
+O ecrã é bom.
+O teclado é confortável.
+A bateria não dura muito.
+O som é aceitável.
+O computador é rápido.
+O ecrã tem boa qualidade.
+O teclado responde bem.
+A bateria dura bastante.
+O portátil é silencioso.
+O desempenho é sólido.
+O ecrã é fantástico.
+O teclado não é confortável.
+A bateria dura bem.
+O som é fraco.
+O computador é rápido.
+O ecrã não é muito brilhante.
+O teclado é bom.
+A bateria poderia melhorar.
+O portátil é leve.
+O desempenho é bom.
+O ecrã é bonito.
+O teclado é confortável.
+A bateria não dura muito.
+O som é razoável.
+O computador é rápido.
+O ecrã tem boa resolução.
+O teclado responde bem.
+A bateria dura bastante.
+O portátil é silencioso.
+O desempenho é sólido.

@@ -5,3 +5,5 @@ torch
 transformers
 pytest // test smiles
 pillow
+
+pip install fastapi uvicorn transformers torch scikit-fuzzy pandas numpy redis streamlit
