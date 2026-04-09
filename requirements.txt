@@ -10,3 +10,7 @@ pip install fastapi uvicorn transformers torch scikit-fuzzy pandas numpy redis s
 
 pip install transformers torch spacy
 python -m spacy download pt_core_news_sm
+
+pip install pysentimiento
+
+pip install rdflib
