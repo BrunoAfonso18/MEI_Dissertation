@@ -1,0 +1,124 @@
+version: '3.9'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: sentiment_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass sentiment_redis_pass
+    volumes:
+      - redis_data:/data
+    networks:
+      - sentiment_network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: sentiment_dw_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: sentiment_dw
+      POSTGRES_USER: sentiment_user
+      POSTGRES_PASSWORD: sentiment_pass_2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - sentiment_network
+    depends_on:
+      - redis
+
+  absa_module:
+    build:
+      context: ./absa_module
+      dockerfile: Dockerfile
+    container_name: absa_module
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - PYTHONUNBUFFERED=1
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=sentiment_redis_pass
+      - ONTOSENTICNET_PATH=/app/ontosenticnet_pt/ontosenticnet.owl
+    volumes:
+      - ./absa_module:/app
+      - ./data:/app/data
+    networks:
+      - sentiment_network
+    command: python -u absa_stream_processor.py   # novo processor com streaming
+
+  fuzzy_logic:
+    build:
+      context: ./fuzzy_logic
+      dockerfile: Dockerfile
+    container_name: fuzzy_logic_module
+    restart: always
+    depends_on:
+      - absa_module
+      - redis
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=sentiment_redis_pass
+      - POSTGRES_HOST=postgres
+    volumes:
+      - ./fuzzy_logic:/app
+    networks:
+      - sentiment_network
+    command: python fuzzy_stream_aggregator.py
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sentiment_backend
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+      - absa_module
+      - fuzzy_logic
+    environment:
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=sentiment_redis_pass
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    networks:
+      - sentiment_network
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sentiment_dashboard
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+      - VITE_WS_URL=ws://localhost:8000/ws
+    ports:
+      - "3000:3000"
+    networks:
+      - sentiment_network
+    # Para desenvolvimento com hot-reload
+    stdin_open: true
+    tty: true
+
+networks:
+  sentiment_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -14,3 +14,5 @@ python -m spacy download pt_core_news_sm
 pip install pysentimiento
 
 pip install rdflib
+
+pip install pyabsa
