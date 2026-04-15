@@ -4,10 +4,10 @@ from tqdm import tqdm
 from pathlib import Path
 import time
 
-input_file = Path("./absa_reviews_2014/reviews.csv")
+input_file = Path("./absa_reviews_2014/reviews_with_opinions.csv")
 output_file = Path("./absa_reviews_2014/reviews_pt.csv")
 
-columns_to_translate = ["Sentence", "Aspect Term"]
+columns_to_translate = ["Sentence", "Aspect Term", "Opinion Term"]
 
 df = pd.read_csv(input_file, encoding="utf-8", low_memory=False)
 
@@ -34,7 +34,7 @@ tqdm.pandas(desc="Traduzindo para PT")
 
 for col in columns_to_translate:
     new_col_name = f"{col}_pt"
-    print(f"\n→ A traduzir coluna: '{col}' → '{new_col_name}'")
+    print(f"\n A traduzir coluna: '{col}' → '{new_col_name}'")
     
     df[new_col_name] = df[col].progress_apply(translate_text)
     
@@ -42,4 +42,4 @@ for col in columns_to_translate:
 
 df.to_csv(output_file, index=False, encoding="utf-8")
 
-print("    TRADUÇÃO DUAS COLUNAS CONCLUÍDA COM SUCESSO!")
+print("    TRADUÇÃO DAS COLUNAS CONCLUÍDA COM SUCESSO!")

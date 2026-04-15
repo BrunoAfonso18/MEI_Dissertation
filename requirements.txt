@@ -16,3 +16,5 @@ pip install pysentimiento
 pip install rdflib
 
 pip install pyabsa
+
+pip install transformers datasets seqeval scikit-learn torch

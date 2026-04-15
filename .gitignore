@@ -1,3 +1,6 @@
 /ontosenticnet
 /zips
-/app/absa_module/train/absa_reviews_2014
+/app/absa_module/data_prep/absa_reviews_2014
+/app/absa_module/train/bio_dataset.json
+/app/absa_module/checkpoints
+/app/absa_module/absa_model_final
