@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - postgres_data:/var/lib/postgresql/data   # persist data
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./app/database/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"     # expose for local debugging, remove in production
     healthcheck:
@@ -57,7 +57,7 @@ services:
     depends_on:
       - backend
     volumes:
-      - app/frontend/src:/app/src               # hot reload during development
+      - ./frontend/src:/app/src               # hot reload during development
 
 volumes:
   postgres_data:    # named volume — survives container restarts
