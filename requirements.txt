@@ -18,3 +18,5 @@ pip install rdflib
 pip install pyabsa
 
 pip install transformers datasets seqeval scikit-learn torch
+
+pip install sqlalchemy psycopg2-binary alembic python-dotenv
