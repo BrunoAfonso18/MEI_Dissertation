@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+transformers
+torch
+sqlalchemy
+psycopg2-binary
+python-dotenv
+pydantic
+spacy
+seqeval
+datasets
