@@ -3,9 +3,16 @@ from datasets import Dataset
 from transformers import AutoTokenizer
 from sklearn.model_selection import train_test_split
 
-LABELS    = ["O", "B-ASP", "I-ASP", "B-OPN", "I-OPN"]
-LABEL2ID  = {l: i for i, l in enumerate(LABELS)}
-ID2LABEL  = {i: l for l, i in LABEL2ID.items()}
+LABELS = [
+    "O", 
+    "B-ASP-pos", "I-ASP-pos", 
+    "B-ASP-neg", "I-ASP-neg", 
+    "B-ASP-neu", "I-ASP-neu",
+    "B-ASP-con", "I-ASP-con",
+    "B-OPN"
+]
+LABEL2ID = {l: i for i, l in enumerate(LABELS)}
+ID2LABEL = {i: l for l, i in LABEL2ID.items()}
 MODEL_NAME = "xlm-roberta-base"
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
@@ -15,7 +22,7 @@ def load_bio_data(path: str) -> list[dict]:
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
 
-    filtered = [d for d in data if "B-ASP" in d["labels"]]
+    filtered = [d for d in data if any(l.startswith("B-ASP") for l in d["labels"])]
     print(f"Total: {len(data)} | Com aspetos: {len(filtered)} | Descartadas: {len(data)-len(filtered)}")
     return filtered
 

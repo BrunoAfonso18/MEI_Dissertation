@@ -30,7 +30,6 @@ services:
       MODEL_PATH:   ./absa_model_final
     volumes:
       - ./backend:/app
-      - model_cache:/app/absa_model_final
     ports:
       - "8000:8000"
     depends_on:
@@ -59,4 +58,3 @@ services:
 
 volumes:
   postgres_data:
-  model_cache:

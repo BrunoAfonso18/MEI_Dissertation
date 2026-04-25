@@ -6,7 +6,7 @@ from transformers import (
     DataCollatorForTokenClassification,
 )
 from seqeval.metrics import f1_score, precision_score, recall_score, classification_report
-from app.absa_module.dataset import build_splits, tokenizer, LABELS, LABEL2ID, ID2LABEL, MODEL_NAME
+from absa_module.dataset import build_splits, tokenizer, LABELS, LABEL2ID, ID2LABEL, MODEL_NAME
 
 
 def compute_metrics(eval_preds):
@@ -21,14 +21,29 @@ def compute_metrics(eval_preds):
         [ID2LABEL[p] for p, l in zip(pred, label) if l != -100]
         for pred, label in zip(predictions, labels)
     ]
-    return {
+    
+    # Overall metrics
+    metrics = {
         "f1":        f1_score(true_labels, pred_labels),
         "precision": precision_score(true_labels, pred_labels),
         "recall":    recall_score(true_labels, pred_labels),
     }
+    
+    # Per-class metrics for polarities
+    for polarity in ["pos", "neg", "neu", "con"]:
+        pos_labels = [l for l in LABELS if polarity in l]
+        true_filtered = [[t for t in seq if t in pos_labels or t == "O"] for seq in true_labels]
+        pred_filtered = [[p for p in seq if p in pos_labels or p == "O"] for seq in pred_labels]
+        if any("B-ASP-" + polarity in l for l in true_labels):
+            try:
+                metrics[f"f1_{polarity}"] = f1_score(true_filtered, pred_filtered, average="binary", pos_label="B-ASP-" + polarity)
+            except:
+                pass
+    
+    return metrics
 
 
-def train(bio_path: str = "bio_dataset.json"):
+def train(bio_path: str = "absa_module/bio_dataset_polarity.json", output_dir: str = "./absa_model_final_polarity"):
     train_ds, val_ds, _ = build_splits(bio_path)
 
     model = AutoModelForTokenClassification.from_pretrained(
@@ -39,7 +54,7 @@ def train(bio_path: str = "bio_dataset.json"):
     )
 
     args = TrainingArguments(
-        output_dir="./checkpoints",
+        output_dir="./checkpoints_polarity",
         eval_strategy="epoch",
         save_strategy="epoch",
         learning_rate=2e-5,
@@ -66,9 +81,11 @@ def train(bio_path: str = "bio_dataset.json"):
     )
 
     trainer.train()
-    trainer.save_model("./absa_model_final")
-    tokenizer.save_pretrained("./absa_model_final")
-    print("Modelo guardado")
+    import os
+    save_path = os.path.join(os.path.dirname(bio_path), output_dir)
+    trainer.save_model(save_path)
+    tokenizer.save_pretrained(save_path)
+    print(f"Modelo guardado em {save_path}")
 
     return trainer
 

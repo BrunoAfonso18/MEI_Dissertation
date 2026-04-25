@@ -19,11 +19,11 @@ models = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("⏳ Loading models...")
+    print(" Loading models...")
     models["extractor"] = AspectExtractor("./absa_model_final")
     models["sentiment"] = SentimentClassifier()
     models["category"]  = CategoryClassifier()
-    print("✅ Models ready")
+    print(" Models ready")
     yield
     models.clear()
 
@@ -41,15 +41,15 @@ async def health():
 # ── Analyze endpoint ────────────────────────────────────────────
 @app.post("/analyze", response_model=ReviewResponse)
 async def analyze(request: ReviewRequest, db: Session = Depends(get_db)):
-    # 1. Extract aspects
     extracted = models["extractor"].predict(request.text)
     aspects   = extracted["aspects"]
     opinions  = extracted["opinions"]
+    polarities = extracted.get("polarities", [])
 
     results = []
     for i, aspect in enumerate(aspects):
         opinion  = opinions[i] if i < len(opinions) else None
-        polarity = models["sentiment"].predict(aspect, request.text)
+        polarity = polarities[i] if i < len(polarities) else models["sentiment"].predict(aspect, request.text)
         category = models["category"].predict(aspect, request.text)
         results.append({
             "aspect_term":        aspect,

@@ -4,8 +4,12 @@
 /app/absa_module/train/bio_dataset.json
 /app/absa_module/checkpoints
 /app/absa_module/absa_model_final
-/app/backend/absa_model_final
+/app/absa_module/absa_model_final_polarity
+
+app/backend/absa_model_final
 
 /app/backend/__pycache__/
 /app/backend/database/__pycache__/
 /app/backend/models/__pycache__/
+app/absa_module/__pycache__/
+app/checkpoints_polarity/
