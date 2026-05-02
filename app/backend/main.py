@@ -13,6 +13,7 @@ from database.repository import (
 from models.extractor import AspectExtractor
 from models.sentiment import SentimentClassifier
 from models.category import CategoryClassifier
+from models.fuzzy_sentiment import fuzzy_analyzer
 
 # ── Load models once at startup ─────────────────────────────────
 models = {}
@@ -49,12 +50,19 @@ async def analyze(request: ReviewRequest, db: Session = Depends(get_db)):
     results = []
     for i, aspect in enumerate(aspects):
         opinion  = opinions[i] if i < len(opinions) else None
-        polarity = polarities[i] if i < len(polarities) else models["sentiment"].predict(aspect, request.text)
+        sentiment_raw = models["sentiment"].predict(aspect, request.text)
+        
+        fuzzy_result = fuzzy_analyzer.analyze(sentiment_raw)
+        
         category = models["category"].predict(aspect, request.text)
         results.append({
             "aspect_term":        aspect,
             "opinion_term":       opinion,
-            "sentiment_polarity": polarity,
+            "positive_score":   fuzzy_result["positive_score"],
+            "neutral_score":    fuzzy_result["neutral_score"],
+            "negative_score":   fuzzy_result["negative_score"],
+            "sentiment_polarity": fuzzy_result["sentiment_label"],
+            "confidence":         fuzzy_result["defuzzified_score"],
             "aspect_category":    category,
         })
 

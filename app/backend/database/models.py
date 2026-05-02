@@ -28,9 +28,12 @@ class AspectPrediction(Base):
     review_id          = Column(Integer, ForeignKey("reviews.id"), nullable=False)
     aspect_term        = Column(String(200))
     opinion_term       = Column(String(200), nullable=True)
-    sentiment_polarity = Column(String(20))   # positive / neutral / negative
     aspect_category    = Column(String(100))
-    confidence         = Column(Float, nullable=True)
-    created_at         = Column(DateTime, server_default=func.now())
+    positive_score    = Column(Float, nullable=True)
+    neutral_score     = Column(Float, nullable=True)
+    negative_score   = Column(Float, nullable=True)
+    sentiment_polarity = Column(String(20))
+    confidence        = Column(Float, nullable=True)
+    created_at        = Column(DateTime, server_default=func.now())
 
     review = relationship("Review", back_populates="aspects")

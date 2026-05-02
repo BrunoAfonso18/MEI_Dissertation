@@ -17,7 +17,11 @@ def save_aspects(db: Session, review_id: int, aspects: list[dict]) -> list[Aspec
             review_id          = review_id,
             aspect_term        = a["aspect_term"],
             opinion_term       = a.get("opinion_term"),
+            positive_score    = a.get("positive_score"),
+            neutral_score     = a.get("neutral_score"),
+            negative_score    = a.get("negative_score"),
             sentiment_polarity = a["sentiment_polarity"],
+            confidence        = a.get("confidence"),
             aspect_category    = a["aspect_category"],
         )
         for a in aspects

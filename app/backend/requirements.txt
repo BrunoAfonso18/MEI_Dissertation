@@ -11,3 +11,4 @@ seqeval
 datasets
 sentencepiece
 protobuf
+scikit-fuzzy
