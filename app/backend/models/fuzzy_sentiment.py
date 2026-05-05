@@ -22,11 +22,18 @@ class FuzzySentimentAnalyzer:
         }
 
     def defuzzify_centroid(self, fuzzy_scores: dict) -> float:
-        aggregated = np.fmax(
-            fuzzy_scores["negative"],
-            np.fmax(fuzzy_scores["neutral"], fuzzy_scores["positive"])
-        )
-        return fuzz.defuzz(self.x_confidence, aggregated, "centroid")
+        if not fuzzy_scores:
+            return 0.5
+
+        neg = fuzzy_scores.get("negative", 0.0)
+        neu = fuzzy_scores.get("neutral", 0.0)
+        pos = fuzzy_scores.get("positive", 0.0)
+
+        total = neg + neu + pos
+        if total == 0.0:
+            return 0.5
+
+        return (neg * 0.0 + neu * 0.5 + pos * 1.0) / total
 
     def defuzzify_label(self, fuzzy_scores: dict) -> str:
         scores = {
@@ -37,16 +44,19 @@ class FuzzySentimentAnalyzer:
         return max(scores, key=scores.get)
 
     def analyze(self, raw_scores: dict) -> dict:
-        raw_conf = raw_scores.get("confidence", 0.5)
-        
-        fuzzy_scores = self.fuzzify({"confidence": raw_conf})
-        
+        pos = raw_scores.get("positive_score", 0.33)
+        neu = raw_scores.get("neutral_score", 0.33)
+        neg = raw_scores.get("negative_score", 0.34)
+
+        defuzz = self.defuzzify_centroid({"negative": neg, "neutral": neu, "positive": pos})
+        label = self.defuzzify_label({"negative": neg, "neutral": neu, "positive": pos})
+
         return {
-            "positive_score": float(fuzzy_scores["positive"]),
-            "neutral_score": float(fuzzy_scores["neutral"]),
-            "negative_score": float(fuzzy_scores["negative"]),
-            "defuzzified_score": float(self.defuzzify_centroid(fuzzy_scores)),
-            "sentiment_label": self.defuzzify_label(fuzzy_scores),
+            "positive_score": float(pos),
+            "neutral_score": float(neu),
+            "negative_score": float(neg),
+            "defuzzified_score": float(defuzz),
+            "sentiment_label": label,
         }
 
     def aggregate_aspects(self, aspect_results: list[dict]) -> dict:
@@ -57,16 +67,24 @@ class FuzzySentimentAnalyzer:
         avg_neutral = np.mean([r["neutral_score"] for r in aspect_results])
         avg_negative = np.mean([r["negative_score"] for r in aspect_results])
 
-        aggregated = {
+        if avg_positive == 0.0 and avg_neutral == 0.0 and avg_negative == 0.0:
+            label = "neutral"
+            defuzz_score = 0.5
+        else:
+            fuzzy_scores = {
+                "negative": avg_negative,
+                "neutral": avg_neutral,
+                "positive": avg_positive,
+            }
+            label = self.defuzzify_label(fuzzy_scores)
+            defuzz_score = self.defuzzify_centroid(fuzzy_scores)
+
+        return {
             "positive": float(avg_positive),
             "neutral": float(avg_neutral),
             "negative": float(avg_negative),
-        }
-
-        return {
-            **aggregated,
-            "defuzzified_score": float(self.defuzzify_centroid(aggregated)),
-            "sentiment_label": self.defuzzify_label(aggregated),
+            "defuzzified_score": float(defuzz_score),
+            "sentiment_label": label,
         }
 
 
