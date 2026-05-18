@@ -41,20 +41,5 @@ services:
       timeout: 10s
       retries: 3
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: frontend
-    restart: unless-stopped
-    environment:
-      VITE_API_URL: http://localhost:8000
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
-    volumes:
-      - ./frontend/src:/app/src
-
 volumes:
   postgres_data:
