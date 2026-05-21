@@ -2,11 +2,11 @@ import json
 import numpy as np
 from transformers import AutoModelForTokenClassification, AutoTokenizer
 from seqeval.metrics import classification_report
-from dataset import build_splits, ID2LABEL, LABEL2ID
+from absa_module.dataset import build_splits, ID2LABEL, LABEL2ID
 import torch
 
 def evaluate(model_path: str = "./absa_model_final",
-             bio_path:   str = "bio_dataset.json"):
+             bio_path:   str = "absa_module/bio_dataset_polarity.json"):
 
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model     = AutoModelForTokenClassification.from_pretrained(model_path)

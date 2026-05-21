@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-MEI_Dissertation is an academic project implementing **Aspect-Based Sentiment Analysis (ABSA)** with fuzzy logic for Portuguese reviews. It's a dissertation/Master's project, not a production system.
+MEI_Dissertation is an academic project implementing **Aspect-Based Sentiment Analysis (ABSA)** with fuzzy logic for Portuguese and English reviews of restaurants. It's a dissertation/Master's project, not a production system.
 
 ## Stack
 

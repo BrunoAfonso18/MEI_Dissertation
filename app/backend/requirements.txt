@@ -12,3 +12,5 @@ datasets
 sentencepiece
 protobuf
 scikit-fuzzy
+python-multipart
+pandas

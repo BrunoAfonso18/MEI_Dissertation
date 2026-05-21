@@ -13,3 +13,7 @@ app/backend/absa_model_final
 /app/backend/models/__pycache__/
 app/absa_module/__pycache__/
 app/checkpoints_polarity/
+
+app/.env
+venv
+/app/data

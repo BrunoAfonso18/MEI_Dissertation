@@ -1,9 +1,15 @@
 from transformers import pipeline
 
 CATEGORIES = [
-    "food quality", "food price", "service", "ambience",
-    "battery life", "camera quality", "screen quality",
-    "performance", "design", "value for money", "software",
+    "food quality",
+    "service",
+    "price and value",
+    "ambience and atmosphere",
+    "location",
+    "portion size",
+    "menu variety",
+    "cleanliness",
+    "waiting time",
 ]
 
 class CategoryClassifier:

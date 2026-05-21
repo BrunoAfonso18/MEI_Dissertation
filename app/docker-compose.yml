@@ -27,9 +27,10 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://user:password@postgres:5432/dw
-      MODEL_PATH:   ./absa_model_final
+      MODEL_PATH:   /absa_module/absa_model_final_polarity
     volumes:
       - ./backend:/app
+      - ./absa_module:/absa_module:ro
     ports:
       - "8000:8000"
     depends_on:

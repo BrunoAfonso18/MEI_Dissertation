@@ -40,15 +40,11 @@ def tokenize_and_align(examples: dict) -> dict:
         aligned  = []
         prev     = None
         for word_id in word_ids:
-            if word_id is None:
-                aligned.append(-100)           
-            elif word_id != prev:
-                aligned.append(LABEL2ID[labels[word_id]])
+            if word_id is None or word_id == prev:
+                # Special tokens ([CLS],[SEP]) and subsequent subwords → ignored in loss
+                aligned.append(-100)
             else:
-                label = labels[word_id]
-                if label.startswith("B-"):
-                    label = "I-" + label[2:]
-                aligned.append(LABEL2ID.get(label, LABEL2ID["O"]))
+                aligned.append(LABEL2ID.get(labels[word_id], LABEL2ID["O"]))
             prev = word_id
         all_labels.append(aligned)
     tokenized["labels"] = all_labels

@@ -25,7 +25,7 @@ class DimReview(Base):
     """Review dimension for the data warehouse"""
     __tablename__ = "dim_review"
 
-    id_review   = Column(Integer, primary_key=True, index=True)
+    id_review   = Column(Integer, primary_key=True, index=True, autoincrement=True)
     source      = Column(String(100), nullable=True)
     text        = Column(Text, nullable=True)
     language    = Column(String(10), nullable=True)

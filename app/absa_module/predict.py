@@ -27,7 +27,8 @@ def predict(text: str) -> dict:
     word_ids    = inputs.word_ids()
 
     aspects, opinions = [], []
-    current_asp, current_opn = [], []
+    current_asp, current_asp_polarity = [], None
+    current_opn = []
 
     prev_word_id = None
     for token_idx, word_id in enumerate(word_ids):
@@ -38,15 +39,16 @@ def predict(text: str) -> dict:
         label = ID2LABEL[predictions[token_idx]]
         word  = words[word_id]
 
-        if label == "B-ASP":
+        if label.startswith("B-ASP-"):
             if current_asp:
-                aspects.append(" ".join(current_asp))
+                aspects.append({"term": " ".join(current_asp), "polarity": current_asp_polarity})
             current_asp = [word]
+            current_asp_polarity = label.split("-")[-1]  # pos, neg, neu, con
             if current_opn:
                 opinions.append(" ".join(current_opn))
                 current_opn = []
 
-        elif label == "I-ASP":
+        elif label.startswith("I-ASP-"):
             current_asp.append(word)
 
         elif label == "B-OPN":
@@ -54,16 +56,18 @@ def predict(text: str) -> dict:
                 opinions.append(" ".join(current_opn))
             current_opn = [word]
             if current_asp:
-                aspects.append(" ".join(current_asp))
+                aspects.append({"term": " ".join(current_asp), "polarity": current_asp_polarity})
                 current_asp = []
+                current_asp_polarity = None
 
         elif label == "I-OPN":
             current_opn.append(word)
 
         else:  # O
             if current_asp:
-                aspects.append(" ".join(current_asp))
+                aspects.append({"term": " ".join(current_asp), "polarity": current_asp_polarity})
                 current_asp = []
+                current_asp_polarity = None
             if current_opn:
                 opinions.append(" ".join(current_opn))
                 current_opn = []
@@ -71,19 +75,22 @@ def predict(text: str) -> dict:
         prev_word_id = word_id
 
     # Flush final
-    if current_asp: aspects.append(" ".join(current_asp))
-    if current_opn: opinions.append(" ".join(current_opn))
+    if current_asp:
+        aspects.append({"term": " ".join(current_asp), "polarity": current_asp_polarity})
+    if current_opn:
+        opinions.append(" ".join(current_opn))
 
     return {
-        "sentence":     text,
-        "aspect_terms": aspects,
+        "sentence":      text,
+        "aspect_terms":  aspects,
         "opinion_terms": opinions,
     }
 
 
 def print_result(result: dict):
     print(f'\n "{result["sentence"]}"')
-    print(f'   Aspetos  : {result["aspect_terms"]}')
+    for asp in result["aspect_terms"]:
+        print(f'   Aspeto   : {asp["term"]}  [{asp["polarity"]}]')
     print(f'   Opiniões : {result["opinion_terms"]}')
 
 

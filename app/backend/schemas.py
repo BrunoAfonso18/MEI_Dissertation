@@ -2,14 +2,14 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, date
 
+
 class AspectResult(BaseModel):
-    """Aspect sentiment analysis result"""
     aspect_term: Optional[str]
     opinion_term: Optional[str]
-    pos_score: Optional[float]      # Fuzzy positive membership
-    neut_score: Optional[float]     # Fuzzy neutral membership
-    neg_score: Optional[float]      # Fuzzy negative membership
-    fuzzy_crisp_score: Optional[float]  # Crisp score from centroid method
+    pos_score: Optional[float]
+    neut_score: Optional[float]
+    neg_score: Optional[float]
+    fuzzy_crisp_score: Optional[float]
     sentiment_polarity: Optional[str]
     confidence: Optional[float]
     aspect_category: Optional[str]
@@ -18,27 +18,53 @@ class AspectResult(BaseModel):
         from_attributes = True
 
 
+class QueryRequest(BaseModel):
+    """Simplified query: only the review text and restaurant ID are needed."""
+    text: str
+    restaurant_id: int
+
+
 class ReviewRequest(BaseModel):
-    """Request to analyze a restaurant review"""
-    restaurant_id: int              # Restaurant being reviewed
-    review_id: int                  # Source system review ID
-    text: str                       # Review text to analyze
-    source: str = "api"             # Data source
-    language: str = "en"            # Language code
+    """Full review request (kept for backwards compatibility)."""
+    restaurant_id: int
+    review_id: int
+    text: str
+    source: str = "api"
+    language: str = "pt"
 
 
 class ReviewResponse(BaseModel):
-    """Response with analysis results"""
-    id: int                         # Review ID
-    restaurant_id: int              # Restaurant ID
-    text: str                       # Original review text
-    source: str                     # Data source
-    language: str                   # Language
-    created_at: datetime            # Analysis timestamp
-    aspects: list[AspectResult]     # Detected aspects and sentiments
+    id: int
+    restaurant_id: int
+    text: str
+    source: str
+    language: str
+    created_at: datetime
+    aspects: list[AspectResult]
 
     class Config:
         from_attributes = True
+
+
+class BulkUploadResponse(BaseModel):
+    """Summary response for CSV bulk upload."""
+    total: int
+    processed: int
+    failed: int
+    errors: list[str] = []
+
+
+class RestaurantResponse(BaseModel):
+    id_restaurant: int
+    name: Optional[str]
+    district: Optional[str]
+    category: Optional[str]
+    address: Optional[str]
+    inspection_grade: Optional[str]
+
+    class Config:
+        from_attributes = True
+
 
 class DimCalendarResponse(BaseModel):
     date_id: date
@@ -72,6 +98,7 @@ class DimRestaurantResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 class FactSentimentResponse(BaseModel):
     fact_id: int
