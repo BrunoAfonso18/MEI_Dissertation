@@ -3,6 +3,20 @@ import skfuzzy as fuzz
 from skfuzzy import membership as mem
 
 
+def polarity_to_scores(polarity: str, confidence: float) -> dict:
+    """Convert a BIO polarity label + softmax confidence into fuzzy input scores."""
+    conf = max(0.0, min(1.0, confidence))
+    rest = (1.0 - conf) / 2.0
+    if polarity == "positive":
+        return {"positive_score": conf, "neutral_score": rest, "negative_score": rest}
+    if polarity == "negative":
+        return {"positive_score": rest, "neutral_score": rest, "negative_score": conf}
+    if polarity == "neutral":
+        return {"positive_score": rest, "neutral_score": conf, "negative_score": rest}
+    # conflict
+    return {"positive_score": 0.4, "neutral_score": 0.2, "negative_score": 0.4}
+
+
 class FuzzySentimentAnalyzer:
     """
     Fuzzy Logic Sentiment Analyzer for ABSA.

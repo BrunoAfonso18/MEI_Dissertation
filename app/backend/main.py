@@ -27,26 +27,12 @@ from database.repository import (
 )
 from models.extractor import AspectExtractor
 from models.category import CategoryClassifier
-from models.fuzzy_sentiment import fuzzy_analyzer
+from models.fuzzy_sentiment import fuzzy_analyzer, polarity_to_scores
 
 models = {}
 
 
 MODEL_PATH = os.getenv("MODEL_PATH", "./absa_model_final")
-
-
-def _polarity_to_scores(polarity: str, confidence: float) -> dict:
-    """Convert BIO polarity label + softmax confidence to fuzzy input scores."""
-    conf = max(0.0, min(1.0, confidence))
-    rest = (1.0 - conf) / 2.0
-    if polarity == "positive":
-        return {"positive_score": conf, "neutral_score": rest, "negative_score": rest}
-    if polarity == "negative":
-        return {"positive_score": rest, "neutral_score": rest, "negative_score": conf}
-    if polarity == "neutral":
-        return {"positive_score": rest, "neutral_score": conf, "negative_score": rest}
-    # conflict
-    return {"positive_score": 0.4, "neutral_score": 0.2, "negative_score": 0.4}
 
 
 @asynccontextmanager
@@ -96,7 +82,7 @@ def _analyse_text(text: str, restaurant_id: int, db: Session) -> tuple[int, list
         polarity   = polarities[i]  if i < len(polarities)  else "neutral"
         confidence = confidences[i] if i < len(confidences) else 0.5
 
-        sentiment_raw = _polarity_to_scores(polarity, confidence)
+        sentiment_raw = polarity_to_scores(polarity, confidence)
         fuzzy_result  = fuzzy_analyzer.analyze(sentiment_raw)
         category      = models["category"].predict(aspect, text)
 

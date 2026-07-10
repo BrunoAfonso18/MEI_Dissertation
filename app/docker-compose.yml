@@ -42,5 +42,23 @@ services:
       timeout: 10s
       retries: 3
 
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: frontend
+    restart: unless-stopped
+    environment:
+      DISPLAY: ":99"
+    volumes:
+      - ./frontend:/app/frontend
+      - ./backend/models:/app/backend/models:ro
+      - ./absa_module:/app/absa_module:ro
+    ports:
+      - "6080:6080"
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   postgres_data:

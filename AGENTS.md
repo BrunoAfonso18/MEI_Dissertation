@@ -7,8 +7,11 @@ MEI_Dissertation is an academic project implementing **Aspect-Based Sentiment An
 ## Stack
 
 - **Backend**: Python 3.11+, FastAPI, Transformers, Torch, SQLAlchemy, PostgreSQL
-- **Frontend**: React 19, TypeScript, Vite (port 3000)
-- **Infrastructure**: Docker Compose (PostgreSQL + Backend + Frontend)
+- **Frontend**: Python desktop GUI (customtkinter), not a web app. Runs its own
+  copy of the ABSA + fuzzy-sentiment pipeline in-process (no HTTP call to the backend).
+- **Infrastructure**: Docker Compose (PostgreSQL + Backend + Frontend). The frontend
+  container has no real display, so it runs Xvfb + x11vnc + websockify/novnc internally
+  and streams the GUI to a browser via noVNC.
 
 ## Running the Application
 
@@ -18,8 +21,15 @@ docker-compose up --build
 ```
 
 - Backend API: http://localhost:8000
-- Frontend: http://localhost:3000
+- Frontend (noVNC viewer): http://localhost:6080/vnc.html
 - PostgreSQL: localhost:5432 (db: `dw`, user: `password`)
+
+Alternatively, run the frontend natively (opens a real desktop window instead of a
+browser-streamed one):
+```bash
+.\venv\Scripts\activate.bat
+python app/frontend/app.py
+```
 
 ## Key Directories
 
@@ -28,7 +38,7 @@ docker-compose up --build
 | `app/backend/` | FastAPI API, models, database |
 | `app/backend/absa_model_final/` | Trained NER model for aspect extraction |
 | `app/absa_module/` | Training scripts, dataset, checkpoints |
-| `app/frontend/` | React application |
+| `app/frontend/` | Python desktop GUI (customtkinter) — the "smiley" sentiment demo |
 | `docs/` | Architecture and design decisions |
 
 ## Environment
