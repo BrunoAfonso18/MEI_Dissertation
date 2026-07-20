@@ -7,11 +7,12 @@ MEI_Dissertation is an academic project implementing **Aspect-Based Sentiment An
 ## Stack
 
 - **Backend**: Python 3.11+, FastAPI, Transformers, Torch, SQLAlchemy, PostgreSQL
-- **Frontend**: Python desktop GUI (customtkinter), not a web app. Runs its own
-  copy of the ABSA + fuzzy-sentiment pipeline in-process (no HTTP call to the backend).
-- **Infrastructure**: Docker Compose (PostgreSQL + Backend + Frontend). The frontend
-  container has no real display, so it runs Xvfb + x11vnc + websockify/novnc internally
-  and streams the GUI to a browser via noVNC.
+- **Frontend**: Plotly Dash web app. The live smiley still runs its own copy of the
+  ABSA + fuzzy-sentiment pipeline in-process (no HTTP call to the backend, unchanged
+  interaction/latency); submitting a review or a bulk CSV calls the backend API
+  (`POST /query`, `POST /reviews/upload`) so the already-processed result is
+  persisted straight into the data warehouse.
+- **Infrastructure**: Docker Compose (PostgreSQL + Backend + Frontend).
 
 ## Running the Application
 
@@ -21,11 +22,10 @@ docker-compose up --build
 ```
 
 - Backend API: http://localhost:8000
-- Frontend (noVNC viewer): http://localhost:6080/vnc.html
+- Frontend (Dash): http://localhost:8050
 - PostgreSQL: localhost:5432 (db: `dw`, user: `password`)
 
-Alternatively, run the frontend natively (opens a real desktop window instead of a
-browser-streamed one):
+Alternatively, run the frontend natively:
 ```bash
 .\venv\Scripts\activate.bat
 python app/frontend/app.py
@@ -38,7 +38,7 @@ python app/frontend/app.py
 | `app/backend/` | FastAPI API, models, database |
 | `app/backend/absa_model_final/` | Trained NER model for aspect extraction |
 | `app/absa_module/` | Training scripts, dataset, checkpoints |
-| `app/frontend/` | Python desktop GUI (customtkinter) — the "smiley" sentiment demo |
+| `app/frontend/` | Plotly Dash web app — the "smiley" sentiment demo + review submission |
 | `docs/` | Architecture and design decisions |
 
 ## Environment

@@ -209,3 +209,53 @@ def sentiment_over_time(db: Session) -> list[dict]:
         }
         for r in rows
     ]
+
+
+def overview_kpis(db: Session) -> dict:
+    total_reviews = db.query(func.count(func.distinct(FactSentiment.id_review))).scalar() or 0
+    total_aspects = db.query(func.count(FactSentiment.fact_id)).scalar() or 0
+    avg_score = db.query(func.avg(FactSentiment.fuzzy_crisp_score)).scalar()
+
+    polarity_counts = dict(
+        db.query(FactSentiment.sentiment_polarity, func.count(FactSentiment.fact_id))
+        .group_by(FactSentiment.sentiment_polarity)
+        .all()
+    )
+
+    def pct(label: str) -> float:
+        return round(100 * polarity_counts.get(label, 0) / total_aspects, 1) if total_aspects else 0.0
+
+    return {
+        "total_reviews": total_reviews,
+        "total_aspects": total_aspects,
+        "avg_crisp_score": float(avg_score) if avg_score is not None else None,
+        "pct_positive": pct("positive"),
+        "pct_neutral": pct("neutral"),
+        "pct_negative": pct("negative"),
+    }
+
+
+def restaurant_performance(db: Session) -> list[dict]:
+    rows = (
+        db.query(
+            DimRestaurant.id_restaurant,
+            DimRestaurant.name,
+            DimRestaurant.district,
+            func.avg(FactSentiment.fuzzy_crisp_score).label("avg_crisp_score"),
+            func.count(func.distinct(FactSentiment.id_review)).label("review_count"),
+        )
+        .join(FactSentiment, FactSentiment.id_restaurant == DimRestaurant.id_restaurant)
+        .group_by(DimRestaurant.id_restaurant, DimRestaurant.name, DimRestaurant.district)
+        .order_by(desc("avg_crisp_score"))
+        .all()
+    )
+    return [
+        {
+            "id_restaurant": r.id_restaurant,
+            "name": r.name,
+            "district": r.district,
+            "avg_crisp_score": float(r.avg_crisp_score) if r.avg_crisp_score is not None else None,
+            "review_count": r.review_count,
+        }
+        for r in rows
+    ]

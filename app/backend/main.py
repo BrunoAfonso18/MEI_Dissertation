@@ -24,6 +24,8 @@ from database.repository import (
     sentiment_by_category,
     top_negative_aspects,
     sentiment_over_time,
+    overview_kpis,
+    restaurant_performance,
 )
 from models.extractor import AspectExtractor
 from models.category import CategoryClassifier
@@ -217,3 +219,13 @@ async def get_top_negative(limit: int = 10, db: Session = Depends(get_db)):
 @app.get("/analytics/sentiment-over-time")
 async def get_sentiment_over_time(db: Session = Depends(get_db)):
     return sentiment_over_time(db)
+
+
+@app.get("/analytics/overview")
+async def get_overview(db: Session = Depends(get_db)):
+    return overview_kpis(db)
+
+
+@app.get("/analytics/restaurant-performance")
+async def get_restaurant_performance(db: Session = Depends(get_db)):
+    return restaurant_performance(db)

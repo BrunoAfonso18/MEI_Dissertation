@@ -49,13 +49,13 @@ services:
     container_name: frontend
     restart: unless-stopped
     environment:
-      DISPLAY: ":99"
+      BACKEND_URL: "http://backend:8000"
     volumes:
       - ./frontend:/app/frontend
       - ./backend/models:/app/backend/models:ro
       - ./absa_module:/app/absa_module:ro
     ports:
-      - "6080:6080"
+      - "8050:8050"
     depends_on:
       backend:
         condition: service_healthy

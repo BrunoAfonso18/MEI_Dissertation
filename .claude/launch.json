@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dash-frontend",
+      "runtimeExecutable": "C:\\Users\\waffl\\Desktop\\MEI_Dissertation\\venv\\Scripts\\python.exe",
+      "runtimeArgs": ["C:\\Users\\waffl\\Desktop\\MEI_Dissertation\\app\\frontend\\app.py"],
+      "port": 8050
+    }
+  ]
+}
