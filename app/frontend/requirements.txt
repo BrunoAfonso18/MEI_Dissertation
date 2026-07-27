@@ -1,4 +1,5 @@
-dash
+streamlit>=1.37
+plotly
 requests
 numpy
 scipy

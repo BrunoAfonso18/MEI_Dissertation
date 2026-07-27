@@ -7,11 +7,19 @@ MEI_Dissertation is an academic project implementing **Aspect-Based Sentiment An
 ## Stack
 
 - **Backend**: Python 3.11+, FastAPI, Transformers, Torch, SQLAlchemy, PostgreSQL
-- **Frontend**: Plotly Dash web app. The live smiley still runs its own copy of the
-  ABSA + fuzzy-sentiment pipeline in-process (no HTTP call to the backend, unchanged
-  interaction/latency); submitting a review or a bulk CSV calls the backend API
+- **Frontend**: Streamlit multi-page app (previously Plotly Dash, previously a
+  customtkinter desktop app streamed via noVNC). The live smiley on the
+  "Submeter Review" page still runs its own copy of the ABSA + fuzzy-sentiment
+  pipeline in-process (no HTTP call to the backend), cached with
+  `st.cache_resource` so the model loads once per server process; it updates
+  whenever the review textbox loses focus or Ctrl+Enter is pressed (Streamlit
+  reruns the script on interaction rather than pushing live updates per
+  keystroke). Submitting a review or a bulk CSV calls the backend API
   (`POST /query`, `POST /reviews/upload`) so the already-processed result is
-  persisted straight into the data warehouse.
+  persisted straight into the data warehouse. A sidebar (via `st.navigation`)
+  groups the "Submeter Review" page and four read-only dashboard pages
+  (Visão Geral, Categorias, Aspetos & Tendência, Restaurantes) that visualize
+  the data warehouse through the backend's `/analytics/*` endpoints.
 - **Infrastructure**: Docker Compose (PostgreSQL + Backend + Frontend).
 
 ## Running the Application
@@ -22,13 +30,13 @@ docker-compose up --build
 ```
 
 - Backend API: http://localhost:8000
-- Frontend (Dash): http://localhost:8050
+- Frontend (Streamlit): http://localhost:8050
 - PostgreSQL: localhost:5432 (db: `dw`, user: `password`)
 
 Alternatively, run the frontend natively:
 ```bash
 .\venv\Scripts\activate.bat
-python app/frontend/app.py
+streamlit run app/frontend/streamlit_app.py
 ```
 
 ## Key Directories
@@ -38,7 +46,8 @@ python app/frontend/app.py
 | `app/backend/` | FastAPI API, models, database |
 | `app/backend/absa_model_final/` | Trained NER model for aspect extraction |
 | `app/absa_module/` | Training scripts, dataset, checkpoints |
-| `app/frontend/` | Plotly Dash web app — the "smiley" sentiment demo + review submission |
+| `app/frontend/` | Streamlit multi-page app — the "smiley" sentiment demo, review submission, and dashboard |
+| `app/frontend/pages/` | One file per sidebar page (Streamlit's multi-page convention) |
 | `docs/` | Architecture and design decisions |
 
 ## Environment
@@ -51,10 +60,14 @@ MODEL_PATH=./absa_model_final
 
 ## API Endpoints
 
-- `POST /analyze` - Analyze a review text
-- `GET /analytics/sentiment-by-category` - Aggregated sentiment
+- `GET /restaurants` - List all registered restaurants
+- `POST /query` - Analyze a single review and persist it into the DW
+- `POST /reviews/upload` - Bulk CSV upload (`restaurant_id`, `text` columns), persisted into the DW
+- `GET /analytics/overview` - KPIs (total reviews, % positive/neutral/negative, avg score)
+- `GET /analytics/sentiment-by-category` - Aggregated sentiment by aspect category
 - `GET /analytics/top-negative-aspects` - Top negative aspects
 - `GET /analytics/sentiment-over-time` - Time-series sentiment
+- `GET /analytics/restaurant-performance` - Avg score + review count per restaurant
 
 ## Known Limitations
 
