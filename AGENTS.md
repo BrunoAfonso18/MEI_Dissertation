@@ -7,19 +7,20 @@ MEI_Dissertation is an academic project implementing **Aspect-Based Sentiment An
 ## Stack
 
 - **Backend**: Python 3.11+, FastAPI, Transformers, Torch, SQLAlchemy, PostgreSQL
-- **Frontend**: Streamlit multi-page app (previously Plotly Dash, previously a
-  customtkinter desktop app streamed via noVNC). The live smiley on the
-  "Submeter Review" page still runs its own copy of the ABSA + fuzzy-sentiment
-  pipeline in-process (no HTTP call to the backend), cached with
-  `st.cache_resource` so the model loads once per server process; it updates
-  whenever the review textbox loses focus or Ctrl+Enter is pressed (Streamlit
-  reruns the script on interaction rather than pushing live updates per
-  keystroke). Submitting a review or a bulk CSV calls the backend API
-  (`POST /query`, `POST /reviews/upload`) so the already-processed result is
-  persisted straight into the data warehouse. A sidebar (via `st.navigation`)
-  groups the "Submeter Review" page and four read-only dashboard pages
-  (Visão Geral, Categorias, Aspetos & Tendência, Restaurantes) that visualize
-  the data warehouse through the backend's `/analytics/*` endpoints.
+- **Frontend**: Plotly Dash app using Dash Pages (previously Streamlit,
+  previously a customtkinter desktop app streamed via noVNC). The live smiley
+  on the "Submeter Review" page runs its own copy of the ABSA + fuzzy-sentiment
+  pipeline in-process (no HTTP call to the backend) and reacts keystroke by
+  keystroke via a ~300ms `dcc.Interval` poll. Submitting a review or a bulk
+  CSV calls the backend API (`POST /query`, `POST /reviews/upload`) so the
+  already-processed result is persisted straight into the data warehouse. A
+  sidebar (built from `dash.page_registry`, grouped via a custom `category`
+  kwarg passed to `dash.register_page`) lists the "Submeter Review" page and
+  four read-only dashboard pages (Visão Geral, Categorias, Aspetos &
+  Tendência, Restaurantes) that visualize the data warehouse through the
+  backend's `/analytics/*` endpoints. Only the active page's layout is
+  mounted, so background components (like the smiley's Interval) only run
+  while that page is open.
 - **Infrastructure**: Docker Compose (PostgreSQL + Backend + Frontend).
 
 ## Running the Application
@@ -30,13 +31,13 @@ docker-compose up --build
 ```
 
 - Backend API: http://localhost:8000
-- Frontend (Streamlit): http://localhost:8050
+- Frontend (Dash): http://localhost:8050
 - PostgreSQL: localhost:5432 (db: `dw`, user: `password`)
 
 Alternatively, run the frontend natively:
 ```bash
 .\venv\Scripts\activate.bat
-streamlit run app/frontend/streamlit_app.py
+python app/frontend/app.py
 ```
 
 ## Key Directories
@@ -46,8 +47,8 @@ streamlit run app/frontend/streamlit_app.py
 | `app/backend/` | FastAPI API, models, database |
 | `app/backend/absa_model_final/` | Trained NER model for aspect extraction |
 | `app/absa_module/` | Training scripts, dataset, checkpoints |
-| `app/frontend/` | Streamlit multi-page app — the "smiley" sentiment demo, review submission, and dashboard |
-| `app/frontend/pages/` | One file per sidebar page (Streamlit's multi-page convention) |
+| `app/frontend/` | Dash app — the "smiley" sentiment demo, review submission, and dashboard |
+| `app/frontend/pages/` | One file per sidebar page (Dash Pages convention, `dash.register_page`) |
 | `docs/` | Architecture and design decisions |
 
 ## Environment

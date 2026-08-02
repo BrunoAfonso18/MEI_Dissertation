@@ -2,7 +2,7 @@ import io
 import os
 import pandas as pd
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
 from sqlalchemy.orm import Session
@@ -17,7 +17,7 @@ from schemas import (
 )
 from database.connection import get_db
 from database.repository import (
-    save_fact_sentiment,
+    add_fact_sentiment,
     load_or_create_dimensions,
     create_dim_review,
     get_all_restaurants,
@@ -78,6 +78,10 @@ def _analyse_text(text: str, restaurant_id: int, db: Session) -> tuple[int, list
     polarities  = extracted["polarities"]
     confidences = extracted["confidences"]
 
+    # One batched zero-shot call for every aspect in the review, instead of
+    # one call per aspect - this is what dominated submission latency.
+    categories = models["category"].predict_batch(aspects, text)
+
     results = []
     for i, aspect in enumerate(aspects):
         opinion    = opinions[i] if i < len(opinions) else None
@@ -86,7 +90,7 @@ def _analyse_text(text: str, restaurant_id: int, db: Session) -> tuple[int, list
 
         sentiment_raw = polarity_to_scores(polarity, confidence)
         fuzzy_result  = fuzzy_analyzer.analyze(sentiment_raw)
-        category      = models["category"].predict(aspect, text)
+        category      = categories[i]
 
         aspect_data = {
             "aspect_term":       aspect,
@@ -101,7 +105,7 @@ def _analyse_text(text: str, restaurant_id: int, db: Session) -> tuple[int, list
         }
         results.append(aspect_data)
 
-        save_fact_sentiment(
+        add_fact_sentiment(
             db,
             review_id=dim_review.id_review,
             restaurant_id=restaurant_id,
@@ -109,6 +113,7 @@ def _analyse_text(text: str, restaurant_id: int, db: Session) -> tuple[int, list
             aspect_data=aspect_data,
         )
 
+    db.commit()
     return dim_review.id_review, results
 
 
@@ -205,27 +210,74 @@ async def upload_reviews(
 
 
 # ── Analytics endpoints ───────────────────────────────────────────
+#
+# Every endpoint below accepts the same optional filter set (start_date,
+# end_date, restaurant_id, district), matching the filters the dashboard's
+# filter bar exposes. Charts fire a request with whatever filters are
+# active, and the query is built against the star schema (FactSentiment
+# joined with DimRestaurant when a district filter is set) accordingly.
 
 @app.get("/analytics/sentiment-by-category")
-async def get_sentiment_by_category(db: Session = Depends(get_db)):
-    return sentiment_by_category(db)
+async def get_sentiment_by_category(
+    start_date: date | None = None,
+    end_date: date | None = None,
+    restaurant_id: int | None = None,
+    district: str | None = None,
+    db: Session = Depends(get_db),
+):
+    return sentiment_by_category(
+        db, start_date=start_date, end_date=end_date, restaurant_id=restaurant_id, district=district
+    )
 
 
 @app.get("/analytics/top-negative-aspects")
-async def get_top_negative(limit: int = 10, db: Session = Depends(get_db)):
-    return top_negative_aspects(db, limit=limit)
+async def get_top_negative(
+    limit: int = 10,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    restaurant_id: int | None = None,
+    district: str | None = None,
+    db: Session = Depends(get_db),
+):
+    return top_negative_aspects(
+        db, limit=limit, start_date=start_date, end_date=end_date, restaurant_id=restaurant_id, district=district
+    )
 
 
 @app.get("/analytics/sentiment-over-time")
-async def get_sentiment_over_time(db: Session = Depends(get_db)):
-    return sentiment_over_time(db)
+async def get_sentiment_over_time(
+    start_date: date | None = None,
+    end_date: date | None = None,
+    restaurant_id: int | None = None,
+    district: str | None = None,
+    db: Session = Depends(get_db),
+):
+    return sentiment_over_time(
+        db, start_date=start_date, end_date=end_date, restaurant_id=restaurant_id, district=district
+    )
 
 
 @app.get("/analytics/overview")
-async def get_overview(db: Session = Depends(get_db)):
-    return overview_kpis(db)
+async def get_overview(
+    start_date: date | None = None,
+    end_date: date | None = None,
+    restaurant_id: int | None = None,
+    district: str | None = None,
+    db: Session = Depends(get_db),
+):
+    return overview_kpis(
+        db, start_date=start_date, end_date=end_date, restaurant_id=restaurant_id, district=district
+    )
 
 
 @app.get("/analytics/restaurant-performance")
-async def get_restaurant_performance(db: Session = Depends(get_db)):
-    return restaurant_performance(db)
+async def get_restaurant_performance(
+    start_date: date | None = None,
+    end_date: date | None = None,
+    restaurant_id: int | None = None,
+    district: str | None = None,
+    db: Session = Depends(get_db),
+):
+    return restaurant_performance(
+        db, start_date=start_date, end_date=end_date, restaurant_id=restaurant_id, district=district
+    )

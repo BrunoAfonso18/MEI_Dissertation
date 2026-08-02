@@ -2,14 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "streamlit-frontend",
+      "name": "dash-frontend",
       "runtimeExecutable": "C:\\Users\\waffl\\Desktop\\MEI_Dissertation\\venv\\Scripts\\python.exe",
-      "runtimeArgs": [
-        "-m", "streamlit", "run",
-        "C:\\Users\\waffl\\Desktop\\MEI_Dissertation\\app\\frontend\\streamlit_app.py",
-        "--server.port=8050", "--server.address=0.0.0.0",
-        "--server.headless=true", "--browser.gatherUsageStats=false"
-      ],
+      "runtimeArgs": ["C:\\Users\\waffl\\Desktop\\MEI_Dissertation\\app\\frontend\\app.py"],
       "port": 8050
     }
   ]

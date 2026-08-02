@@ -1,16 +1,36 @@
 """
-Shared constants and helpers for the Streamlit dashboard pages.
+Shared constants and helpers for the Dash frontend pages.
 
-Kept framework-agnostic on purpose (no `st.*` calls here) so it can be
-imported both by the entry point and by every page under pages/.
+Kept UI-framework-agnostic where possible (no `dash.*`/`dcc.*` calls here)
+so the analytics-fetching and chart-building logic stays reusable.
 """
 
+import base64
 import os
 
+import cv2
 import requests
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 PLACEHOLDER_TEXT = "A comida estava deliciosa mas o serviço foi muito lento."
+
+DARK_BG = "#16171a"
+CARD_BG = "#212226"
+BORDER_COLOR = "#33343a"
+TEXT_COLOR = "#e6e6e6"
+MUTED_COLOR = "#96979d"
+ACCENT_COLOR = "#4c7cf0"
+
+FONT_FAMILY = (
+    "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+)
+
+CARD_STYLE = {
+    "backgroundColor": CARD_BG,
+    "borderRadius": "10px",
+    "border": f"1px solid {BORDER_COLOR}",
+    "padding": "20px",
+}
 
 POLARITY_COLORS = {"positive": "#4caf50", "neutral": "#f5d76e", "negative": "#e05555"}
 
@@ -26,19 +46,18 @@ CATEGORY_LABELS = {
     "WAITING_TIME": "Tempo de Espera",
 }
 
-# Transparent backgrounds so charts blend into Streamlit's own light/dark theme
-# instead of hardcoding colors (unlike the previous Dash version, which had to
-# paint its own dark theme from scratch).
 CHART_LAYOUT = dict(
-    paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(0,0,0,0)",
+    paper_bgcolor=CARD_BG,
+    plot_bgcolor=CARD_BG,
+    font_color=TEXT_COLOR,
     margin=dict(l=40, r=20, t=40, b=40),
+    legend=dict(bgcolor="rgba(0,0,0,0)"),
 )
 
 
-def get_json(path: str, default):
+def get_json(path: str, default, params: dict | None = None):
     try:
-        resp = requests.get(f"{BACKEND_URL}{path}", timeout=10)
+        resp = requests.get(f"{BACKEND_URL}{path}", params=params, timeout=10)
         resp.raise_for_status()
         return resp.json()
     except requests.RequestException:
@@ -59,9 +78,13 @@ def fetch_restaurants() -> list[dict]:
     return get_json("/restaurants", [])
 
 
-def to_rgba(frame):
-    """render_smiley() returns BGRA; st.image wants RGB(A)."""
-    return frame[:, :, [2, 1, 0, 3]]
+def frame_to_data_uri(frame) -> str:
+    """render_smiley() returns a BGRA numpy array; encode it as a PNG data URI for html.Img."""
+    ok, buf = cv2.imencode(".png", frame)
+    if not ok:
+        raise RuntimeError("Falha ao codificar o smiley em PNG.")
+    b64 = base64.b64encode(buf).decode("ascii")
+    return f"data:image/png;base64,{b64}"
 
 
 def crisp_positivity(crisp_score) -> float:

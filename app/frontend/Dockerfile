@@ -13,6 +13,4 @@ COPY frontend/ .
 
 EXPOSE 8050
 
-CMD ["streamlit", "run", "streamlit_app.py", \
-     "--server.port=8050", "--server.address=0.0.0.0", \
-     "--server.headless=true", "--browser.gatherUsageStats=false"]
+CMD ["python", "app.py"]

@@ -113,15 +113,18 @@ def get_all_restaurants(db: Session) -> list[DimRestaurant]:
 
 # ── Fact Table Functions ─────────────────────────────────────────
 
-def save_fact_sentiment(
+def add_fact_sentiment(
     db: Session,
     review_id: int,
     restaurant_id: int,
     created_at: datetime,
     aspect_data: dict,
 ) -> FactSentiment:
-    _ensure_calendar(db, created_at)
-
+    """
+    Stages a fact row without committing. Callers that insert several facts
+    for the same review (e.g. one per aspect) should call this in a loop and
+    commit once at the end instead of round-tripping per row.
+    """
     fact = FactSentiment(
         id_review=review_id,
         id_restaurant=restaurant_id,
@@ -135,6 +138,18 @@ def save_fact_sentiment(
         created_at=created_at,
     )
     db.add(fact)
+    return fact
+
+
+def save_fact_sentiment(
+    db: Session,
+    review_id: int,
+    restaurant_id: int,
+    created_at: datetime,
+    aspect_data: dict,
+) -> FactSentiment:
+    _ensure_calendar(db, created_at)
+    fact = add_fact_sentiment(db, review_id, restaurant_id, created_at, aspect_data)
     db.commit()
     db.refresh(fact)
     return fact
@@ -142,15 +157,49 @@ def save_fact_sentiment(
 
 # ── Analytical Queries ───────────────────────────────────────────
 
-def sentiment_by_category(db: Session) -> list[dict]:
+def _apply_fact_filters(
+    query,
+    start_date: date = None,
+    end_date: date = None,
+    restaurant_id: int = None,
+    district: str = None,
+    joined_restaurant: bool = False,
+):
+    """
+    Applies the dashboard's common filter set (date range, restaurant,
+    district) to a query already selecting from FactSentiment. Joins
+    DimRestaurant only when a district filter needs it and the caller
+    hasn't already joined it.
+    """
+    if district and not joined_restaurant:
+        query = query.join(DimRestaurant, DimRestaurant.id_restaurant == FactSentiment.id_restaurant)
+    if start_date:
+        query = query.filter(FactSentiment.date_id >= start_date)
+    if end_date:
+        query = query.filter(FactSentiment.date_id <= end_date)
+    if restaurant_id:
+        query = query.filter(FactSentiment.id_restaurant == restaurant_id)
+    if district:
+        query = query.filter(DimRestaurant.district == district)
+    return query
+
+
+def sentiment_by_category(
+    db: Session,
+    start_date: date = None,
+    end_date: date = None,
+    restaurant_id: int = None,
+    district: str = None,
+) -> list[dict]:
+    query = db.query(
+        FactSentiment.aspect_category,
+        FactSentiment.sentiment_polarity,
+        func.count().label("count"),
+        func.avg(FactSentiment.fuzzy_crisp_score).label("avg_crisp_score"),
+    )
+    query = _apply_fact_filters(query, start_date, end_date, restaurant_id, district)
     rows = (
-        db.query(
-            FactSentiment.aspect_category,
-            FactSentiment.sentiment_polarity,
-            func.count().label("count"),
-            func.avg(FactSentiment.fuzzy_crisp_score).label("avg_crisp_score"),
-        )
-        .group_by(FactSentiment.aspect_category, FactSentiment.sentiment_polarity)
+        query.group_by(FactSentiment.aspect_category, FactSentiment.sentiment_polarity)
         .order_by(desc("count"))
         .all()
     )
@@ -165,15 +214,22 @@ def sentiment_by_category(db: Session) -> list[dict]:
     ]
 
 
-def top_negative_aspects(db: Session, limit: int = 10) -> list[dict]:
+def top_negative_aspects(
+    db: Session,
+    limit: int = 10,
+    start_date: date = None,
+    end_date: date = None,
+    restaurant_id: int = None,
+    district: str = None,
+) -> list[dict]:
+    query = db.query(
+        FactSentiment.aspect_term,
+        func.count().label("count"),
+        func.avg(FactSentiment.fuzzy_crisp_score).label("avg_crisp_score"),
+    ).filter(FactSentiment.sentiment_polarity == "negative")
+    query = _apply_fact_filters(query, start_date, end_date, restaurant_id, district)
     rows = (
-        db.query(
-            FactSentiment.aspect_term,
-            func.count().label("count"),
-            func.avg(FactSentiment.fuzzy_crisp_score).label("avg_crisp_score"),
-        )
-        .filter(FactSentiment.sentiment_polarity == "negative")
-        .group_by(FactSentiment.aspect_term)
+        query.group_by(FactSentiment.aspect_term)
         .order_by(desc("count"))
         .limit(limit)
         .all()
@@ -188,15 +244,22 @@ def top_negative_aspects(db: Session, limit: int = 10) -> list[dict]:
     ]
 
 
-def sentiment_over_time(db: Session) -> list[dict]:
+def sentiment_over_time(
+    db: Session,
+    start_date: date = None,
+    end_date: date = None,
+    restaurant_id: int = None,
+    district: str = None,
+) -> list[dict]:
+    query = db.query(
+        FactSentiment.date_id,
+        FactSentiment.sentiment_polarity,
+        func.count().label("count"),
+        func.avg(FactSentiment.fuzzy_crisp_score).label("avg_crisp_score"),
+    )
+    query = _apply_fact_filters(query, start_date, end_date, restaurant_id, district)
     rows = (
-        db.query(
-            FactSentiment.date_id,
-            FactSentiment.sentiment_polarity,
-            func.count().label("count"),
-            func.avg(FactSentiment.fuzzy_crisp_score).label("avg_crisp_score"),
-        )
-        .group_by(FactSentiment.date_id, FactSentiment.sentiment_polarity)
+        query.group_by(FactSentiment.date_id, FactSentiment.sentiment_polarity)
         .order_by(FactSentiment.date_id)
         .all()
     )
@@ -211,13 +274,22 @@ def sentiment_over_time(db: Session) -> list[dict]:
     ]
 
 
-def overview_kpis(db: Session) -> dict:
-    total_reviews = db.query(func.count(func.distinct(FactSentiment.id_review))).scalar() or 0
-    total_aspects = db.query(func.count(FactSentiment.fact_id)).scalar() or 0
-    avg_score = db.query(func.avg(FactSentiment.fuzzy_crisp_score)).scalar()
+def overview_kpis(
+    db: Session,
+    start_date: date = None,
+    end_date: date = None,
+    restaurant_id: int = None,
+    district: str = None,
+) -> dict:
+    def _filtered(query):
+        return _apply_fact_filters(query, start_date, end_date, restaurant_id, district)
+
+    total_reviews = _filtered(db.query(func.count(func.distinct(FactSentiment.id_review)))).scalar() or 0
+    total_aspects = _filtered(db.query(func.count(FactSentiment.fact_id))).scalar() or 0
+    avg_score = _filtered(db.query(func.avg(FactSentiment.fuzzy_crisp_score))).scalar()
 
     polarity_counts = dict(
-        db.query(FactSentiment.sentiment_polarity, func.count(FactSentiment.fact_id))
+        _filtered(db.query(FactSentiment.sentiment_polarity, func.count(FactSentiment.fact_id)))
         .group_by(FactSentiment.sentiment_polarity)
         .all()
     )
@@ -235,17 +307,25 @@ def overview_kpis(db: Session) -> dict:
     }
 
 
-def restaurant_performance(db: Session) -> list[dict]:
+def restaurant_performance(
+    db: Session,
+    start_date: date = None,
+    end_date: date = None,
+    restaurant_id: int = None,
+    district: str = None,
+) -> list[dict]:
+    query = db.query(
+        DimRestaurant.id_restaurant,
+        DimRestaurant.name,
+        DimRestaurant.district,
+        func.avg(FactSentiment.fuzzy_crisp_score).label("avg_crisp_score"),
+        func.count(func.distinct(FactSentiment.id_review)).label("review_count"),
+    ).join(FactSentiment, FactSentiment.id_restaurant == DimRestaurant.id_restaurant)
+    query = _apply_fact_filters(
+        query, start_date, end_date, restaurant_id, district, joined_restaurant=True
+    )
     rows = (
-        db.query(
-            DimRestaurant.id_restaurant,
-            DimRestaurant.name,
-            DimRestaurant.district,
-            func.avg(FactSentiment.fuzzy_crisp_score).label("avg_crisp_score"),
-            func.count(func.distinct(FactSentiment.id_review)).label("review_count"),
-        )
-        .join(FactSentiment, FactSentiment.id_restaurant == DimRestaurant.id_restaurant)
-        .group_by(DimRestaurant.id_restaurant, DimRestaurant.name, DimRestaurant.district)
+        query.group_by(DimRestaurant.id_restaurant, DimRestaurant.name, DimRestaurant.district)
         .order_by(desc("avg_crisp_score"))
         .all()
     )
