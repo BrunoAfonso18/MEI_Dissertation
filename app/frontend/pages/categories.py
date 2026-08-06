@@ -2,10 +2,10 @@
 
 import dash
 import plotly.graph_objects as go
-from dash import Input, Output, callback, dcc, html
+from dash import Output, callback, dcc, html
 
 from common import CARD_STYLE, CATEGORY_LABELS, CHART_LAYOUT, POLARITY_COLORS, fetch_restaurants, get_json, pivot_category_counts
-from filters import filter_bar, filter_params
+from filters import filter_inputs, filter_params, filter_sidebar, register_sidebar_toggle
 
 dash.register_page(__name__, path="/categorias", name="Categorias", category="Dashboard", order=2)
 
@@ -20,23 +20,23 @@ def _chart_card(children) -> html.Div:
 
 def layout():
     return html.Div(
-        [
-            html.H2("Categorias de Aspeto"),
-            filter_bar("categories", fetch_restaurants()),
-            html.Div(id="categories-content"),
-        ]
+        className="dashboard-layout",
+        children=[
+            html.Div(
+                className="dashboard-main",
+                children=[
+                    html.H2("Categorias de Aspeto"),
+                    html.Div(id="categories-content"),
+                ],
+            ),
+            filter_sidebar("categories", fetch_restaurants()),
+        ],
     )
 
 
-@callback(
-    Output("categories-content", "children"),
-    Input("categories-district", "value"),
-    Input("categories-restaurant", "value"),
-    Input("categories-date-range", "start_date"),
-    Input("categories-date-range", "end_date"),
-)
-def render_categories(district, restaurant_id, start_date, end_date):
-    params = filter_params(district, restaurant_id, start_date, end_date)
+@callback(Output("categories-content", "children"), *filter_inputs("categories"))
+def render_categories(restaurant_ids, districts, categories, grades, polarities, aspect_categories, start_date, end_date):
+    params = filter_params(restaurant_ids, districts, categories, grades, polarities, aspect_categories, start_date, end_date)
 
     rows = get_json("/analytics/sentiment-by-category", [], params=params)
     pivot = pivot_category_counts(rows)
@@ -67,7 +67,10 @@ def render_categories(district, restaurant_id, start_date, end_date):
     return html.Div(
         style={"display": "flex", "gap": "20px", "flexWrap": "wrap"},
         children=[
-            _chart_card(dcc.Graph(figure=bar_fig)),
-            _chart_card(dcc.Graph(figure=radar_fig)),
+            _chart_card(dcc.Graph(figure=bar_fig, config={"responsive": True})),
+            _chart_card(dcc.Graph(figure=radar_fig, config={"responsive": True})),
         ],
     )
+
+
+register_sidebar_toggle("categories")

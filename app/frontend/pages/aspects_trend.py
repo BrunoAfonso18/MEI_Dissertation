@@ -2,10 +2,10 @@
 
 import dash
 import plotly.graph_objects as go
-from dash import Input, Output, callback, dcc, html
+from dash import Output, callback, dcc, html
 
 from common import CARD_STYLE, CHART_LAYOUT, POLARITY_COLORS, fetch_restaurants, get_json
-from filters import filter_bar, filter_params
+from filters import filter_inputs, filter_params, filter_sidebar, register_sidebar_toggle
 
 dash.register_page(__name__, path="/aspetos-tendencia", name="Aspetos & Tendência", category="Dashboard", order=3)
 
@@ -20,23 +20,23 @@ def _chart_card(children) -> html.Div:
 
 def layout():
     return html.Div(
-        [
-            html.H2("Aspetos & Tendência"),
-            filter_bar("aspects-trend", fetch_restaurants()),
-            html.Div(id="aspects-trend-content"),
-        ]
+        className="dashboard-layout",
+        children=[
+            html.Div(
+                className="dashboard-main",
+                children=[
+                    html.H2("Aspetos & Tendência"),
+                    html.Div(id="aspects-trend-content"),
+                ],
+            ),
+            filter_sidebar("aspects-trend", fetch_restaurants()),
+        ],
     )
 
 
-@callback(
-    Output("aspects-trend-content", "children"),
-    Input("aspects-trend-district", "value"),
-    Input("aspects-trend-restaurant", "value"),
-    Input("aspects-trend-date-range", "start_date"),
-    Input("aspects-trend-date-range", "end_date"),
-)
-def render_aspects_trend(district, restaurant_id, start_date, end_date):
-    params = filter_params(district, restaurant_id, start_date, end_date)
+@callback(Output("aspects-trend-content", "children"), *filter_inputs("aspects-trend"))
+def render_aspects_trend(restaurant_ids, districts, categories, grades, polarities, aspect_categories, start_date, end_date):
+    params = filter_params(restaurant_ids, districts, categories, grades, polarities, aspect_categories, start_date, end_date)
 
     negative_rows = sorted(
         get_json("/analytics/top-negative-aspects", [], params=params), key=lambda r: r["count"]
@@ -74,7 +74,10 @@ def render_aspects_trend(district, restaurant_id, start_date, end_date):
     return html.Div(
         style={"display": "flex", "gap": "20px", "flexWrap": "wrap"},
         children=[
-            _chart_card(dcc.Graph(figure=negative_fig)),
-            _chart_card(dcc.Graph(figure=trend_fig)),
+            _chart_card(dcc.Graph(figure=negative_fig, config={"responsive": True})),
+            _chart_card(dcc.Graph(figure=trend_fig, config={"responsive": True})),
         ],
     )
+
+
+register_sidebar_toggle("aspects-trend")

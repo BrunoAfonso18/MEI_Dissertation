@@ -1,10 +1,10 @@
 """Visão Geral - KPI cards + a mini-smiley per aspect category."""
 
 import dash
-from dash import Input, Output, callback, html
+from dash import Output, callback, html
 
 from common import CARD_STYLE, CATEGORY_LABELS, MUTED_COLOR, crisp_positivity, fetch_restaurants, frame_to_data_uri, get_json
-from filters import filter_bar, filter_params
+from filters import filter_inputs, filter_params, filter_sidebar, register_sidebar_toggle
 from smiley import render_smiley
 
 dash.register_page(__name__, path="/visao-geral", name="Visão Geral", category="Dashboard", order=1)
@@ -26,23 +26,23 @@ def _card(label: str, value) -> html.Div:
 
 def layout():
     return html.Div(
-        [
-            html.H2("Visão Geral"),
-            filter_bar("overview", fetch_restaurants()),
-            html.Div(id="overview-content"),
-        ]
+        className="dashboard-layout",
+        children=[
+            html.Div(
+                className="dashboard-main",
+                children=[
+                    html.H2("Visão Geral"),
+                    html.Div(id="overview-content"),
+                ],
+            ),
+            filter_sidebar("overview", fetch_restaurants()),
+        ],
     )
 
 
-@callback(
-    Output("overview-content", "children"),
-    Input("overview-district", "value"),
-    Input("overview-restaurant", "value"),
-    Input("overview-date-range", "start_date"),
-    Input("overview-date-range", "end_date"),
-)
-def render_overview(district, restaurant_id, start_date, end_date):
-    params = filter_params(district, restaurant_id, start_date, end_date)
+@callback(Output("overview-content", "children"), *filter_inputs("overview"))
+def render_overview(restaurant_ids, districts, categories, grades, polarities, aspect_categories, start_date, end_date):
+    params = filter_params(restaurant_ids, districts, categories, grades, polarities, aspect_categories, start_date, end_date)
 
     overview = get_json("/analytics/overview", {}, params=params)
     avg_score = overview.get("avg_crisp_score")
@@ -127,3 +127,6 @@ def render_overview(district, restaurant_id, start_date, end_date):
             ),
         ]
     )
+
+
+register_sidebar_toggle("overview")

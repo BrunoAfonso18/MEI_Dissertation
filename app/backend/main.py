@@ -4,7 +4,7 @@ import pandas as pd
 from contextlib import asynccontextmanager
 from datetime import date, datetime
 
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
+from fastapi import FastAPI, HTTPException, Depends, Query, UploadFile, File
 from sqlalchemy.orm import Session
 
 from schemas import (
@@ -17,6 +17,7 @@ from schemas import (
 )
 from database.connection import get_db
 from database.repository import (
+    AnalyticsFilters,
     add_fact_sentiment,
     load_or_create_dimensions,
     create_dim_review,
@@ -211,73 +212,72 @@ async def upload_reviews(
 
 # ── Analytics endpoints ───────────────────────────────────────────
 #
-# Every endpoint below accepts the same optional filter set (start_date,
-# end_date, restaurant_id, district), matching the filters the dashboard's
-# filter bar exposes. Charts fire a request with whatever filters are
-# active, and the query is built against the star schema (FactSentiment
-# joined with DimRestaurant when a district filter is set) accordingly.
+# Every endpoint below shares the same filter set (get_analytics_filters):
+# restaurant, district, category (cuisine), inspection grade, sentiment
+# polarity, aspect category and a date range - matching the dashboard's
+# filter sidebar. Each field accepts multiple values (OR/IN). Charts fire a
+# request with whatever's selected, and the query is built dynamically
+# against the star schema (FactSentiment joined with DimRestaurant when a
+# restaurant-level filter is set) accordingly.
+
+def get_analytics_filters(
+    start_date: date | None = None,
+    end_date: date | None = None,
+    restaurant_id: list[int] | None = Query(None),
+    district: list[str] | None = Query(None),
+    category: list[str] | None = Query(None),
+    inspection_grade: list[str] | None = Query(None),
+    sentiment_polarity: list[str] | None = Query(None),
+    aspect_category: list[str] | None = Query(None),
+) -> AnalyticsFilters:
+    return AnalyticsFilters(
+        start_date=start_date,
+        end_date=end_date,
+        restaurant_ids=restaurant_id or [],
+        districts=district or [],
+        categories=category or [],
+        grades=inspection_grade or [],
+        polarities=sentiment_polarity or [],
+        aspect_categories=aspect_category or [],
+    )
+
 
 @app.get("/analytics/sentiment-by-category")
 async def get_sentiment_by_category(
-    start_date: date | None = None,
-    end_date: date | None = None,
-    restaurant_id: int | None = None,
-    district: str | None = None,
+    filters: AnalyticsFilters = Depends(get_analytics_filters),
     db: Session = Depends(get_db),
 ):
-    return sentiment_by_category(
-        db, start_date=start_date, end_date=end_date, restaurant_id=restaurant_id, district=district
-    )
+    return sentiment_by_category(db, filters)
 
 
 @app.get("/analytics/top-negative-aspects")
 async def get_top_negative(
     limit: int = 10,
-    start_date: date | None = None,
-    end_date: date | None = None,
-    restaurant_id: int | None = None,
-    district: str | None = None,
+    filters: AnalyticsFilters = Depends(get_analytics_filters),
     db: Session = Depends(get_db),
 ):
-    return top_negative_aspects(
-        db, limit=limit, start_date=start_date, end_date=end_date, restaurant_id=restaurant_id, district=district
-    )
+    return top_negative_aspects(db, limit=limit, filters=filters)
 
 
 @app.get("/analytics/sentiment-over-time")
 async def get_sentiment_over_time(
-    start_date: date | None = None,
-    end_date: date | None = None,
-    restaurant_id: int | None = None,
-    district: str | None = None,
+    filters: AnalyticsFilters = Depends(get_analytics_filters),
     db: Session = Depends(get_db),
 ):
-    return sentiment_over_time(
-        db, start_date=start_date, end_date=end_date, restaurant_id=restaurant_id, district=district
-    )
+    return sentiment_over_time(db, filters)
 
 
 @app.get("/analytics/overview")
 async def get_overview(
-    start_date: date | None = None,
-    end_date: date | None = None,
-    restaurant_id: int | None = None,
-    district: str | None = None,
+    filters: AnalyticsFilters = Depends(get_analytics_filters),
     db: Session = Depends(get_db),
 ):
-    return overview_kpis(
-        db, start_date=start_date, end_date=end_date, restaurant_id=restaurant_id, district=district
-    )
+    return overview_kpis(db, filters)
 
 
 @app.get("/analytics/restaurant-performance")
 async def get_restaurant_performance(
-    start_date: date | None = None,
-    end_date: date | None = None,
-    restaurant_id: int | None = None,
-    district: str | None = None,
+    filters: AnalyticsFilters = Depends(get_analytics_filters),
     db: Session = Depends(get_db),
 ):
-    return restaurant_performance(
-        db, start_date=start_date, end_date=end_date, restaurant_id=restaurant_id, district=district
-    )
+    return restaurant_performance(db, filters)

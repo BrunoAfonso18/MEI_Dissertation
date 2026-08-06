@@ -2,10 +2,10 @@
 
 import dash
 import plotly.graph_objects as go
-from dash import Input, Output, callback, dash_table, dcc, html
+from dash import Output, callback, dash_table, dcc, html
 
 from common import CARD_STYLE, CHART_LAYOUT, TEXT_COLOR, fetch_restaurants, get_json
-from filters import filter_bar, filter_params
+from filters import filter_inputs, filter_params, filter_sidebar, register_sidebar_toggle
 
 dash.register_page(__name__, path="/restaurantes", name="Restaurantes", category="Dashboard", order=4)
 
@@ -49,23 +49,23 @@ def _ranking_table(rows: list[dict]):
 
 def layout():
     return html.Div(
-        [
-            html.H2("Restaurantes"),
-            filter_bar("restaurants", fetch_restaurants()),
-            html.Div(id="restaurants-content"),
-        ]
+        className="dashboard-layout",
+        children=[
+            html.Div(
+                className="dashboard-main",
+                children=[
+                    html.H2("Restaurantes"),
+                    html.Div(id="restaurants-content"),
+                ],
+            ),
+            filter_sidebar("restaurants", fetch_restaurants()),
+        ],
     )
 
 
-@callback(
-    Output("restaurants-content", "children"),
-    Input("restaurants-district", "value"),
-    Input("restaurants-restaurant", "value"),
-    Input("restaurants-date-range", "start_date"),
-    Input("restaurants-date-range", "end_date"),
-)
-def render_restaurants(district, restaurant_id, start_date, end_date):
-    params = filter_params(district, restaurant_id, start_date, end_date)
+@callback(Output("restaurants-content", "children"), *filter_inputs("restaurants"))
+def render_restaurants(restaurant_ids, districts, categories, grades, polarities, aspect_categories, start_date, end_date):
+    params = filter_params(restaurant_ids, districts, categories, grades, polarities, aspect_categories, start_date, end_date)
 
     rows = get_json("/analytics/restaurant-performance", [], params=params)
     plot_rows = [r for r in rows if r.get("avg_crisp_score") is not None]
@@ -92,6 +92,9 @@ def render_restaurants(district, restaurant_id, start_date, end_date):
         style={"display": "flex", "gap": "20px", "flexWrap": "wrap"},
         children=[
             _chart_card([html.H4("Ranking de restaurantes"), _ranking_table(rows)]),
-            _chart_card(dcc.Graph(figure=scatter_fig)),
+            _chart_card(dcc.Graph(figure=scatter_fig, config={"responsive": True})),
         ],
     )
+
+
+register_sidebar_toggle("restaurants")
