@@ -13,6 +13,7 @@ into the data warehouse.
 """
 
 import base64
+from datetime import datetime
 
 import dash
 import requests
@@ -24,11 +25,14 @@ from common import (
     ACCENT_COLOR,
     BACKEND_URL,
     CARD_STYLE,
+    MUTED_COLOR,
     PLACEHOLDER_TEXT,
+    POLARITY_COLORS,
     TEXT_COLOR,
     error_detail,
     fetch_restaurants,
     frame_to_data_uri,
+    get_json,
 )
 from smiley import render_smiley
 
@@ -48,110 +52,135 @@ def layout():
     initial_frame = render_smiley(0.0, SMILEY_SIZE)
 
     return html.Div(
-        [
-            html.H2("ABSA Sentiment Smiley"),
+        className="dashboard-layout",
+        style={"gap": "24px"},
+        children=[
             html.Div(
-                className="app-card",
-                style={**CARD_STYLE, "maxWidth": "700px", "marginBottom": "24px"},
+                className="dashboard-main",
+                style={"flex": "2", "minWidth": "0"},
                 children=[
-                    html.Label("Escreve uma review de restaurante:", style={"fontWeight": "bold"}),
-                    dcc.Textarea(
-                        id="review-text",
-                        value=PLACEHOLDER_TEXT,
-                        style={
-                            "width": "100%",
-                            "height": "100px",
-                            "marginTop": "8px",
-                            "backgroundColor": "#333",
-                            "color": TEXT_COLOR,
-                            "border": "none",
-                            "borderRadius": "6px",
-                            "padding": "10px",
-                            "fontSize": "14px",
-                        },
-                    ),
+                    html.H2("ABSA Sentiment Smiley"),
                     html.Div(
-                        style={"display": "flex", "justifyContent": "center", "margin": "16px 0"},
+                        className="app-card",
+                        style={**CARD_STYLE, "marginBottom": "24px"},
                         children=[
-                            html.Img(
-                                id="smiley-image",
-                                src=frame_to_data_uri(initial_frame),
-                                style={"width": f"{SMILEY_SIZE[0]}px", "height": f"{SMILEY_SIZE[1]}px"},
-                            )
+                            html.Label("Escreve uma review de restaurante:", style={"fontWeight": "bold"}),
+                            dcc.Textarea(
+                                id="review-text",
+                                value=PLACEHOLDER_TEXT,
+                                style={
+                                    "width": "100%",
+                                    "height": "100px",
+                                    "marginTop": "8px",
+                                    "backgroundColor": "#333",
+                                    "color": TEXT_COLOR,
+                                    "border": "none",
+                                    "borderRadius": "6px",
+                                    "padding": "10px",
+                                    "fontSize": "14px",
+                                },
+                            ),
+                            html.Div(
+                                style={"display": "flex", "justifyContent": "center", "margin": "16px 0"},
+                                children=[
+                                    html.Img(
+                                        id="smiley-image",
+                                        src=frame_to_data_uri(initial_frame),
+                                        style={"width": f"{SMILEY_SIZE[0]}px", "height": f"{SMILEY_SIZE[1]}px"},
+                                    )
+                                ],
+                            ),
+                            html.Div(
+                                id="smiley-status",
+                                children="A carregar o modelo...",
+                                style={"textAlign": "center", "fontWeight": "bold", "marginBottom": "10px"},
+                            ),
+                            html.Pre(
+                                id="aspects-box",
+                                style={
+                                    "backgroundColor": "#111",
+                                    "padding": "10px",
+                                    "borderRadius": "6px",
+                                    "minHeight": "80px",
+                                    "fontFamily": "Consolas, monospace",
+                                    "fontSize": "12px",
+                                    "whiteSpace": "pre-wrap",
+                                },
+                            ),
+                            html.Hr(),
+                            html.Label("Restaurante:", style={"fontWeight": "bold"}),
+                            dcc.Dropdown(
+                                id="restaurant-dropdown",
+                                options=restaurant_options,
+                                value=restaurant_options[0]["value"] if restaurant_options else None,
+                                style={"color": "#000", "marginTop": "8px", "marginBottom": "12px"},
+                            ),
+                            html.Button(
+                                "Submeter review",
+                                id="submit-button",
+                                n_clicks=0,
+                                style={
+                                    "padding": "10px 20px",
+                                    "borderRadius": "6px",
+                                    "border": "none",
+                                    "backgroundColor": ACCENT_COLOR,
+                                    "color": "white",
+                                    "fontWeight": "600",
+                                    "cursor": "pointer",
+                                },
+                            ),
+                            html.Div(id="submit-status", style={"marginTop": "12px"}),
                         ],
                     ),
                     html.Div(
-                        id="smiley-status",
-                        children="A carregar o modelo...",
-                        style={"textAlign": "center", "fontWeight": "bold", "marginBottom": "10px"},
+                        className="app-card",
+                        style=CARD_STYLE,
+                        children=[
+                            html.H4("Submissão em bulk (CSV)"),
+                            html.P(
+                                "Colunas esperadas: restaurant_id, text",
+                                style={"color": "#999", "fontSize": "13px"},
+                            ),
+                            dcc.Upload(
+                                id="bulk-upload",
+                                children=html.Div(["Arrasta um ficheiro CSV ou ", html.A("seleciona um")]),
+                                style={
+                                    "width": "100%",
+                                    "height": "60px",
+                                    "lineHeight": "60px",
+                                    "borderWidth": "1px",
+                                    "borderStyle": "dashed",
+                                    "borderRadius": "6px",
+                                    "textAlign": "center",
+                                    "borderColor": "#555",
+                                },
+                                multiple=False,
+                            ),
+                            html.Div(id="bulk-status", style={"marginTop": "12px"}),
+                        ],
                     ),
-                    html.Pre(
-                        id="aspects-box",
-                        style={
-                            "backgroundColor": "#111",
-                            "padding": "10px",
-                            "borderRadius": "6px",
-                            "minHeight": "80px",
-                            "fontFamily": "Consolas, monospace",
-                            "fontSize": "12px",
-                            "whiteSpace": "pre-wrap",
-                        },
-                    ),
-                    html.Hr(),
-                    html.Label("Restaurante:", style={"fontWeight": "bold"}),
-                    dcc.Dropdown(
-                        id="restaurant-dropdown",
-                        options=restaurant_options,
-                        value=restaurant_options[0]["value"] if restaurant_options else None,
-                        style={"color": "#000", "marginTop": "8px", "marginBottom": "12px"},
-                    ),
-                    html.Button(
-                        "Submeter review",
-                        id="submit-button",
-                        n_clicks=0,
-                        style={
-                            "padding": "10px 20px",
-                            "borderRadius": "6px",
-                            "border": "none",
-                            "backgroundColor": ACCENT_COLOR,
-                            "color": "white",
-                            "fontWeight": "600",
-                            "cursor": "pointer",
-                        },
-                    ),
-                    html.Div(id="submit-status", style={"marginTop": "12px"}),
+                    dcc.Store(id="last-processed-text", data=""),
+                    dcc.Interval(id="smiley-interval", interval=DEBOUNCE_MS, n_intervals=0),
                 ],
             ),
             html.Div(
-                className="app-card",
-                style={**CARD_STYLE, "maxWidth": "700px"},
+                style={"flex": "1", "minWidth": "0"},
                 children=[
-                    html.H4("Submissão em bulk (CSV)"),
-                    html.P(
-                        "Colunas esperadas: restaurant_id, text",
-                        style={"color": "#999", "fontSize": "13px"},
-                    ),
-                    dcc.Upload(
-                        id="bulk-upload",
-                        children=html.Div(["Arrasta um ficheiro CSV ou ", html.A("seleciona um")]),
+                    html.H2("Atividade recente"),
+                    html.Div(
+                        className="app-card",
                         style={
-                            "width": "100%",
-                            "height": "60px",
-                            "lineHeight": "60px",
-                            "borderWidth": "1px",
-                            "borderStyle": "dashed",
-                            "borderRadius": "6px",
-                            "textAlign": "center",
-                            "borderColor": "#555",
+                            **CARD_STYLE,
+                            "position": "sticky",
+                            "top": "20px",
+                            "maxHeight": "calc(100vh - 40px)",
+                            "overflowY": "auto",
                         },
-                        multiple=False,
+                        children=[html.Div(id="recent-activity-panel")],
                     ),
-                    html.Div(id="bulk-status", style={"marginTop": "12px"}),
                 ],
             ),
-            dcc.Store(id="last-processed-text", data=""),
-            dcc.Interval(id="smiley-interval", interval=DEBOUNCE_MS, n_intervals=0),
-        ]
+        ],
     )
 
 
@@ -253,5 +282,85 @@ def submit_bulk(contents, filename):
                 style={"color": "#4caf50" if data["failed"] == 0 else "#e07b39"},
             ),
             html.Ul([html.Li(err) for err in data["errors"]]) if data.get("errors") else None,
+        ]
+    )
+
+
+def _polarity_label(avg_score) -> str:
+    """Buckets a review's average fuzzy_crisp_score into the same 3 labels used across the dashboard."""
+    if avg_score is None:
+        return "neutral"
+    if avg_score >= 0.6:
+        return "positive"
+    if avg_score <= 0.4:
+        return "negative"
+    return "neutral"
+
+
+def _recent_review_item(review: dict) -> html.Div:
+    color = POLARITY_COLORS.get(_polarity_label(review.get("avg_crisp_score")), MUTED_COLOR)
+    text = (review.get("text") or "").strip()
+    snippet = text if len(text) <= 70 else text[:70].rstrip() + "…"
+
+    time_str = ""
+    created_at = review.get("created_at")
+    if created_at:
+        try:
+            time_str = datetime.fromisoformat(created_at).strftime("%d/%m %H:%M")
+        except ValueError:
+            time_str = created_at
+
+    return html.Div(
+        style={"borderLeft": f"3px solid {color}", "paddingLeft": "10px", "marginBottom": "12px"},
+        children=[
+            html.Div(
+                style={"display": "flex", "justifyContent": "space-between", "gap": "8px"},
+                children=[
+                    html.Span(
+                        review.get("restaurant_name") or "—",
+                        style={"fontSize": "12px", "fontWeight": "bold"},
+                    ),
+                    html.Span(time_str, style={"fontSize": "11px", "color": MUTED_COLOR, "whiteSpace": "nowrap"}),
+                ],
+            ),
+            html.Div(snippet, style={"fontSize": "12px", "color": TEXT_COLOR, "marginTop": "2px"}),
+            html.Div(
+                f"{review.get('aspect_count', 0)} aspeto(s)",
+                style={"fontSize": "11px", "color": MUTED_COLOR, "marginTop": "2px"},
+            ),
+        ],
+    )
+
+
+@callback(
+    Output("recent-activity-panel", "children"),
+    Input("submit-status", "children"),
+    Input("bulk-status", "children"),
+)
+def render_recent_activity(_submit_status, _bulk_status):
+    """
+    Refreshes on page load and after every single/bulk submission (both
+    listened Inputs are Outputs of the existing submit/bulk callbacks, so
+    this fires whenever either succeeds - without touching that logic).
+    """
+    data = get_json("/reviews/recent", {"reviews": [], "today_count": 0}, params={"limit": 8})
+    today_count = data.get("today_count", 0)
+    reviews = data.get("reviews", [])
+
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div("Reviews submetidas hoje", style={"fontSize": "12px", "color": MUTED_COLOR}),
+                    html.Div(str(today_count), style={"fontSize": "28px", "fontWeight": "bold"}),
+                ],
+                style={"marginBottom": "14px"},
+            ),
+            html.Hr(style={"marginBottom": "14px"}),
+            html.Div(
+                [_recent_review_item(r) for r in reviews]
+                if reviews
+                else [html.Div("Ainda sem reviews.", style={"color": MUTED_COLOR, "fontSize": "13px"})]
+            ),
         ]
     )

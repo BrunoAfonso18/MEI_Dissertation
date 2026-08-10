@@ -338,3 +338,46 @@ def restaurant_performance(db: Session, filters: AnalyticsFilters = None) -> lis
         }
         for r in rows
     ]
+
+
+# ── Recent activity (Submeter Review page) ────────────────────────
+
+def recent_reviews(db: Session, limit: int = 10) -> list[dict]:
+    """Most recently submitted reviews, one row per review with its aggregated sentiment."""
+    rows = (
+        db.query(
+            DimReview.id_review,
+            DimReview.text,
+            DimReview.created_at,
+            DimRestaurant.name.label("restaurant_name"),
+            func.avg(FactSentiment.fuzzy_crisp_score).label("avg_crisp_score"),
+            func.count(FactSentiment.fact_id).label("aspect_count"),
+        )
+        .join(FactSentiment, FactSentiment.id_review == DimReview.id_review)
+        .join(DimRestaurant, DimRestaurant.id_restaurant == FactSentiment.id_restaurant)
+        .group_by(DimReview.id_review, DimReview.text, DimReview.created_at, DimRestaurant.name)
+        .order_by(desc(DimReview.created_at))
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id_review": r.id_review,
+            "text": r.text,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "restaurant_name": r.restaurant_name,
+            "avg_crisp_score": float(r.avg_crisp_score) if r.avg_crisp_score is not None else None,
+            "aspect_count": r.aspect_count,
+        }
+        for r in rows
+    ]
+
+
+def reviews_submitted_today(db: Session) -> int:
+    today = date.today()
+    return (
+        db.query(func.count(func.distinct(DimReview.id_review)))
+        .filter(func.date(DimReview.created_at) == today)
+        .scalar()
+        or 0
+    )

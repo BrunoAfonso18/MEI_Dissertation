@@ -22,6 +22,8 @@ from database.repository import (
     load_or_create_dimensions,
     create_dim_review,
     get_all_restaurants,
+    recent_reviews,
+    reviews_submitted_today,
     sentiment_by_category,
     top_negative_aspects,
     sentiment_over_time,
@@ -155,6 +157,17 @@ async def query(request: QueryRequest, db: Session = Depends(get_db)):
         created_at=datetime.now(),
         aspects=[AspectResult(**r) for r in results],
     )
+
+
+# ── Recent activity (Submeter Review page) ─────────────────────────
+
+@app.get("/reviews/recent")
+async def get_recent_reviews(limit: int = 10, db: Session = Depends(get_db)):
+    """Feed of the most recently submitted reviews, plus how many were submitted today."""
+    return {
+        "reviews": recent_reviews(db, limit=limit),
+        "today_count": reviews_submitted_today(db),
+    }
 
 
 # ── Bulk CSV upload ────────────────────────────────────────────────
