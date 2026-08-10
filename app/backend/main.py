@@ -24,8 +24,10 @@ from database.repository import (
     get_all_restaurants,
     recent_reviews,
     reviews_submitted_today,
+    seasonality,
     sentiment_by_category,
     top_negative_aspects,
+    top_positive_aspects,
     sentiment_over_time,
     overview_kpis,
     restaurant_performance,
@@ -242,6 +244,7 @@ def get_analytics_filters(
     inspection_grade: list[str] | None = Query(None),
     sentiment_polarity: list[str] | None = Query(None),
     aspect_category: list[str] | None = Query(None),
+    aspect_term: list[str] | None = Query(None),
 ) -> AnalyticsFilters:
     return AnalyticsFilters(
         start_date=start_date,
@@ -252,6 +255,7 @@ def get_analytics_filters(
         grades=inspection_grade or [],
         polarities=sentiment_polarity or [],
         aspect_categories=aspect_category or [],
+        aspect_terms=aspect_term or [],
     )
 
 
@@ -270,6 +274,23 @@ async def get_top_negative(
     db: Session = Depends(get_db),
 ):
     return top_negative_aspects(db, limit=limit, filters=filters)
+
+
+@app.get("/analytics/top-positive-aspects")
+async def get_top_positive(
+    limit: int = 10,
+    filters: AnalyticsFilters = Depends(get_analytics_filters),
+    db: Session = Depends(get_db),
+):
+    return top_positive_aspects(db, limit=limit, filters=filters)
+
+
+@app.get("/analytics/seasonality")
+async def get_seasonality(
+    filters: AnalyticsFilters = Depends(get_analytics_filters),
+    db: Session = Depends(get_db),
+):
+    return seasonality(db, filters)
 
 
 @app.get("/analytics/sentiment-over-time")

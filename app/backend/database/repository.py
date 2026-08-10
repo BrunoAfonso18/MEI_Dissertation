@@ -26,6 +26,7 @@ class AnalyticsFilters:
     grades: list[str] = field(default_factory=list)             # DimRestaurant.inspection_grade
     polarities: list[str] = field(default_factory=list)         # FactSentiment.sentiment_polarity
     aspect_categories: list[str] = field(default_factory=list)  # FactSentiment.aspect_category
+    aspect_terms: list[str] = field(default_factory=list)       # FactSentiment.aspect_term (drill-down)
 
 
 # ── Calendar helpers ─────────────────────────────────────────────
@@ -201,6 +202,8 @@ def _apply_fact_filters(
         query = query.filter(FactSentiment.sentiment_polarity.in_(f.polarities))
     if f.aspect_categories:
         query = query.filter(FactSentiment.aspect_category.in_(f.aspect_categories))
+    if f.aspect_terms:
+        query = query.filter(FactSentiment.aspect_term.in_(f.aspect_terms))
     if f.districts:
         query = query.filter(DimRestaurant.district.in_(f.districts))
     if f.categories:
@@ -235,13 +238,16 @@ def sentiment_by_category(db: Session, filters: AnalyticsFilters = None) -> list
     ]
 
 
-def top_negative_aspects(db: Session, limit: int = 10, filters: AnalyticsFilters = None) -> list[dict]:
+def top_aspects_by_polarity(
+    db: Session, polarity: str, limit: int = 10, filters: AnalyticsFilters = None
+) -> list[dict]:
+    """Aspect leaderboard for a single polarity - shared by top_negative_aspects/top_positive_aspects."""
     f = filters or AnalyticsFilters()
     query = db.query(
         FactSentiment.aspect_term,
         func.count().label("count"),
         func.avg(FactSentiment.fuzzy_crisp_score).label("avg_crisp_score"),
-    ).filter(FactSentiment.sentiment_polarity == "negative")
+    ).filter(FactSentiment.sentiment_polarity == polarity)
     query = _apply_fact_filters(query, f)
     rows = (
         query.group_by(FactSentiment.aspect_term)
@@ -257,6 +263,14 @@ def top_negative_aspects(db: Session, limit: int = 10, filters: AnalyticsFilters
         }
         for r in rows
     ]
+
+
+def top_negative_aspects(db: Session, limit: int = 10, filters: AnalyticsFilters = None) -> list[dict]:
+    return top_aspects_by_polarity(db, "negative", limit, filters)
+
+
+def top_positive_aspects(db: Session, limit: int = 10, filters: AnalyticsFilters = None) -> list[dict]:
+    return top_aspects_by_polarity(db, "positive", limit, filters)
 
 
 def sentiment_over_time(db: Session, filters: AnalyticsFilters = None) -> list[dict]:
@@ -280,6 +294,32 @@ def sentiment_over_time(db: Session, filters: AnalyticsFilters = None) -> list[d
             "count": r.count,
             "avg_crisp_score": float(r.avg_crisp_score) if r.avg_crisp_score else None,
         }
+        for r in rows
+    ]
+
+
+def seasonality(db: Session, filters: AnalyticsFilters = None) -> list[dict]:
+    """
+    Aspect-mention volume by day-of-week x month, using DimCalendar's date
+    hierarchy (previously unused beyond the plain date range filter).
+    day_of_week follows Postgres EXTRACT(DOW): 0=Sunday..6=Saturday.
+    """
+    f = filters or AnalyticsFilters()
+    # Group by the extract() expressions themselves (not their string labels):
+    # DimCalendar already has a real "month" column, so grouping by the
+    # string label "month" resolves to that column instead of our alias and
+    # Postgres rejects the query.
+    dow_expr = func.extract("dow", DimCalendar.date)
+    month_expr = func.extract("month", DimCalendar.date)
+    query = db.query(
+        dow_expr.label("day_of_week"),
+        month_expr.label("month"),
+        func.count(FactSentiment.fact_id).label("count"),
+    ).join(DimCalendar, DimCalendar.date_id == FactSentiment.date_id)
+    query = _apply_fact_filters(query, f)
+    rows = query.group_by(dow_expr, month_expr).all()
+    return [
+        {"day_of_week": int(r.day_of_week), "month": int(r.month), "count": r.count}
         for r in rows
     ]
 

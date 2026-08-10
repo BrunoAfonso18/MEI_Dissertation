@@ -20,7 +20,7 @@ from dash import Dash, Input, Output, callback, dcc, html
 
 from common import DARK_BG, FONT_FAMILY, TEXT_COLOR
 
-app = Dash(__name__, use_pages=True, pages_folder="pages")
+app = Dash(__name__, use_pages=True, pages_folder="pages", suppress_callback_exceptions=True)
 app.title = "ABSA Sentiment Dashboard"
 server = app.server
 
