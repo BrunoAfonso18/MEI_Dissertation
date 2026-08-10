@@ -359,12 +359,15 @@ def restaurant_performance(db: Session, filters: AnalyticsFilters = None) -> lis
         DimRestaurant.id_restaurant,
         DimRestaurant.name,
         DimRestaurant.district,
+        DimRestaurant.inspection_grade,
         func.avg(FactSentiment.fuzzy_crisp_score).label("avg_crisp_score"),
         func.count(func.distinct(FactSentiment.id_review)).label("review_count"),
     ).join(FactSentiment, FactSentiment.id_restaurant == DimRestaurant.id_restaurant)
     query = _apply_fact_filters(query, f, joined_restaurant=True)
     rows = (
-        query.group_by(DimRestaurant.id_restaurant, DimRestaurant.name, DimRestaurant.district)
+        query.group_by(
+            DimRestaurant.id_restaurant, DimRestaurant.name, DimRestaurant.district, DimRestaurant.inspection_grade
+        )
         .order_by(desc("avg_crisp_score"))
         .all()
     )
@@ -373,6 +376,7 @@ def restaurant_performance(db: Session, filters: AnalyticsFilters = None) -> lis
             "id_restaurant": r.id_restaurant,
             "name": r.name,
             "district": r.district,
+            "inspection_grade": r.inspection_grade,
             "avg_crisp_score": float(r.avg_crisp_score) if r.avg_crisp_score is not None else None,
             "review_count": r.review_count,
         }
