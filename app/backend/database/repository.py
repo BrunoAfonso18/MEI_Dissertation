@@ -298,6 +298,18 @@ def sentiment_over_time(db: Session, filters: AnalyticsFilters = None) -> list[d
     ]
 
 
+def reviews_over_time(db: Session, filters: AnalyticsFilters = None) -> list[dict]:
+    """Distinct review count per day - used for the Visão Geral sparkline (sentiment_over_time counts aspect mentions, not reviews)."""
+    f = filters or AnalyticsFilters()
+    query = db.query(
+        FactSentiment.date_id,
+        func.count(func.distinct(FactSentiment.id_review)).label("count"),
+    )
+    query = _apply_fact_filters(query, f)
+    rows = query.group_by(FactSentiment.date_id).order_by(FactSentiment.date_id).all()
+    return [{"date": str(r.date_id), "count": r.count} for r in rows]
+
+
 def seasonality(db: Session, filters: AnalyticsFilters = None) -> list[dict]:
     """
     Aspect-mention volume by day-of-week x month, using DimCalendar's date

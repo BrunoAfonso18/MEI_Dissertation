@@ -23,6 +23,7 @@ from database.repository import (
     create_dim_review,
     get_all_restaurants,
     recent_reviews,
+    reviews_over_time,
     reviews_submitted_today,
     seasonality,
     sentiment_by_category,
@@ -299,6 +300,14 @@ async def get_sentiment_over_time(
     db: Session = Depends(get_db),
 ):
     return sentiment_over_time(db, filters)
+
+
+@app.get("/analytics/reviews-over-time")
+async def get_reviews_over_time(
+    filters: AnalyticsFilters = Depends(get_analytics_filters),
+    db: Session = Depends(get_db),
+):
+    return reviews_over_time(db, filters)
 
 
 @app.get("/analytics/overview")
