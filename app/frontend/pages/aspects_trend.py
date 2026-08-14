@@ -1,6 +1,6 @@
 """
 Aspetos & Tendência - leaderboards de aspetos (criticados/elogiados),
-evolução temporal, drill-down por aspeto e sazonalidade.
+evolução temporal e drill-down por aspeto.
 """
 
 import dash
@@ -12,9 +12,6 @@ from common import CARD_STYLE, CHART_LAYOUT, MUTED_COLOR, POLARITY_COLORS, fetch
 from filters import filter_inputs, filter_params, filter_sidebar, register_sidebar_toggle
 
 dash.register_page(__name__, path="/aspetos-tendencia", name="Aspetos & Tendência", category="Dashboard", order=3)
-
-DOW_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]  # index = Postgres EXTRACT(DOW)
-MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 
 
 def _chart_card(children) -> html.Div:
@@ -118,23 +115,6 @@ def render_aspects_trend(restaurant_ids, districts, categories, grades, polariti
     trend_rows = get_json("/analytics/sentiment-over-time", [], params=params)
     trend_fig = _trend_figure(trend_rows, "Sentimento ao longo do tempo")
 
-    seasonality_rows = get_json("/analytics/seasonality", [], params=params)
-    z = [[0] * 7 for _ in range(12)]
-    for r in seasonality_rows:
-        dow, month = r.get("day_of_week"), r.get("month")
-        if dow is not None and month is not None and 0 <= dow <= 6 and 1 <= month <= 12:
-            z[month - 1][dow] = r["count"]
-    seasonality_fig = go.Figure(
-        go.Heatmap(
-            z=z,
-            x=DOW_LABELS,
-            y=MONTH_LABELS,
-            colorscale="Blues",
-            hovertemplate="%{y}, %{x}: %{z} menções<extra></extra>",
-        )
-    )
-    seasonality_fig.update_layout(title="Sazonalidade - menções por dia da semana e mês", **CHART_LAYOUT)
-
     return html.Div(
         [
             _row(
@@ -156,7 +136,6 @@ def render_aspects_trend(restaurant_ids, districts, categories, grades, polariti
                     ),
                 ]
             ),
-            _row([_chart_card(dcc.Graph(figure=seasonality_fig, config={"responsive": True}))]),
         ]
     )
 
