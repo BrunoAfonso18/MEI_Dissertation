@@ -1,8 +1,11 @@
 """
 Visão Geral - KPI cards com sparkline, cards de destaque (melhor/pior
-restaurante e distrito), smileys por categoria, donuts de distribuição e
-polaridade, e sazonalidade das reviews.
+restaurante e distrito), mapa de distritos, smileys por categoria, donuts de
+distribuição e polaridade, e sazonalidade das reviews.
 """
+
+import json
+from pathlib import Path
 
 import dash
 import plotly.graph_objects as go
@@ -10,6 +13,7 @@ from dash import Output, callback, dcc, html
 
 from common import (
     ACCENT_COLOR,
+    CARD_BG,
     CARD_STYLE,
     CATEGORY_LABELS,
     CHART_LAYOUT,
@@ -28,8 +32,14 @@ dash.register_page(__name__, path="/visao-geral", name="Visão Geral", category=
 KPI_SMILEY_SIZE = (60, 60)
 CATEGORY_SMILEY_SIZE = (90, 90)
 CHART_HEIGHT = "420px"  # shared by every chart card on this page so rows line up
+MAP_HEIGHT = "480px"  # the district map reads better a bit taller
 DOW_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]  # index = Postgres EXTRACT(DOW)
 MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
+_GEOJSON_PATH = Path(__file__).resolve().parent.parent / "assets_data" / "portugal_distritos.geojson"
+with open(_GEOJSON_PATH, encoding="utf-8") as _f:
+    PORTUGAL_DISTRICTS_GEOJSON = json.load(_f)
+ALL_DISTRICT_NAMES = [feat["properties"]["district"] for feat in PORTUGAL_DISTRICTS_GEOJSON["features"]]
 
 
 def _row(children) -> html.Div:
@@ -201,6 +211,60 @@ def render_overview(restaurant_ids, districts, categories, grades, polarities, a
             )
         )
 
+    # ── Mapa de distritos (drill-down geográfico) ───────────────────
+    # Ignora deliberadamente o filtro de distrito da sidebar - o mapa mostra
+    # sempre todos os distritos, respeitando apenas os restantes filtros.
+    map_params = {k: v for k, v in params.items() if k != "district"}
+    district_rows = get_json("/analytics/district-performance", [], params=map_params)
+    district_by_name = {r["district"]: r for r in district_rows}
+    # Sempre os 18 distritos, mesmo sem nenhuma review - os que não têm dados
+    # aparecem com 0 em todos os campos, em vez de ficarem de fora do mapa.
+    full_district_rows = [
+        district_by_name.get(
+            name,
+            {"district": name, "review_count": 0, "avg_crisp_score": None, "pct_positive": 0, "pct_negative": 0, "pct_neutral": 0},
+        )
+        for name in ALL_DISTRICT_NAMES
+    ]
+    district_map = go.Figure(
+        go.Choropleth(
+            geojson=PORTUGAL_DISTRICTS_GEOJSON,
+            featureidkey="properties.district",
+            locations=[r["district"] for r in full_district_rows],
+            z=[r["avg_crisp_score"] if r["avg_crisp_score"] is not None else 0.5 for r in full_district_rows],
+            zmin=0,
+            zmax=1,
+            colorscale="RdYlGn",
+            marker_line_color=MUTED_COLOR,
+            marker_line_width=0.6,
+            customdata=[
+                [r["review_count"], r["pct_positive"], r["pct_negative"], r["pct_neutral"]]
+                for r in full_district_rows
+            ],
+            hovertemplate=(
+                "<b>%{location}</b><br>"
+                "Nº de reviews: %{customdata[0]}<br>"
+                "Positivas: %{customdata[1]}%<br>"
+                "Negativas: %{customdata[2]}%<br>"
+                "Neutras: %{customdata[3]}%"
+                "<extra></extra>"
+            ),
+            colorbar=dict(title="Score médio"),
+        )
+    )
+    district_map.update_geos(
+        fitbounds="locations",
+        visible=False,
+        bgcolor=CARD_BG,
+        showland=True,
+        landcolor=CARD_BG,
+        showframe=False,
+    )
+    district_map.update_layout(
+        title="Distribuição geográfica por distrito",
+        **{**CHART_LAYOUT, "margin": dict(l=0, r=0, t=40, b=0)},
+    )
+
     # ── Distribuição de reviews por distrito (donut) ────────────────
     district_counts: dict[str, int] = {}
     for r in plot_restaurants:
@@ -305,6 +369,13 @@ def render_overview(restaurant_ids, districts, categories, grades, polarities, a
                         worst_district,
                         district_avgs.get(worst_district),
                         POLARITY_COLORS["negative"],
+                    ),
+                ]
+            ),
+            _row(
+                [
+                    _chart_card(
+                        dcc.Graph(figure=district_map, config={"responsive": True}, style={"height": MAP_HEIGHT})
                     ),
                 ]
             ),

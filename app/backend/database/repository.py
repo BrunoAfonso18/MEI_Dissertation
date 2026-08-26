@@ -396,6 +396,67 @@ def restaurant_performance(db: Session, filters: AnalyticsFilters = None) -> lis
     ]
 
 
+def district_performance(db: Session, filters: AnalyticsFilters = None) -> list[dict]:
+    """
+    Per-district aggregate for the Visão Geral map: review count, average
+    fuzzy score and sentiment-polarity breakdown. Callers that want the map
+    to ignore the district filter (it always shows every district) should
+    build `filters` with `districts=[]` regardless of what's selected in the
+    sidebar - every other field is still honoured normally.
+    """
+    f = filters or AnalyticsFilters()
+
+    def _filtered(query):
+        return _apply_fact_filters(query, f, joined_restaurant=True).filter(DimRestaurant.district.isnot(None))
+
+    totals = (
+        _filtered(
+            db.query(
+                DimRestaurant.district,
+                func.count(func.distinct(FactSentiment.id_review)).label("review_count"),
+                func.avg(FactSentiment.fuzzy_crisp_score).label("avg_crisp_score"),
+            ).join(FactSentiment, FactSentiment.id_restaurant == DimRestaurant.id_restaurant)
+        )
+        .group_by(DimRestaurant.district)
+        .all()
+    )
+
+    polarity_rows = (
+        _filtered(
+            db.query(
+                DimRestaurant.district,
+                FactSentiment.sentiment_polarity,
+                func.count().label("count"),
+            ).join(FactSentiment, FactSentiment.id_restaurant == DimRestaurant.id_restaurant)
+        )
+        .group_by(DimRestaurant.district, FactSentiment.sentiment_polarity)
+        .all()
+    )
+    polarity_by_district: dict[str, dict[str, int]] = {}
+    for r in polarity_rows:
+        polarity_by_district.setdefault(r.district, {})[r.sentiment_polarity] = r.count
+
+    results = []
+    for r in totals:
+        pol = polarity_by_district.get(r.district, {})
+        total_aspects = sum(pol.values())
+
+        def pct(label: str) -> float:
+            return round(100 * pol.get(label, 0) / total_aspects, 1) if total_aspects else 0.0
+
+        results.append(
+            {
+                "district": r.district,
+                "review_count": r.review_count,
+                "avg_crisp_score": float(r.avg_crisp_score) if r.avg_crisp_score is not None else None,
+                "pct_positive": pct("positive"),
+                "pct_negative": pct("negative"),
+                "pct_neutral": pct("neutral"),
+            }
+        )
+    return results
+
+
 # ── Recent activity (Submeter Review page) ────────────────────────
 
 def recent_reviews(db: Session, limit: int = 10) -> list[dict]:

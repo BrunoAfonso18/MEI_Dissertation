@@ -21,6 +21,7 @@ from database.repository import (
     add_fact_sentiment,
     load_or_create_dimensions,
     create_dim_review,
+    district_performance,
     get_all_restaurants,
     recent_reviews,
     reviews_over_time,
@@ -324,3 +325,11 @@ async def get_restaurant_performance(
     db: Session = Depends(get_db),
 ):
     return restaurant_performance(db, filters)
+
+
+@app.get("/analytics/district-performance")
+async def get_district_performance(
+    filters: AnalyticsFilters = Depends(get_analytics_filters),
+    db: Session = Depends(get_db),
+):
+    return district_performance(db, filters)

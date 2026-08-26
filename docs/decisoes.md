@@ -27,3 +27,15 @@ Foram usadas BIO Tags para codificar o dataset para fine tune do modelo. Foi uma
 O modelo não está a ter a performance esperada e o modelo utilizada pelo sent. analys. vis apenas analisa sentimentos ao nível da frase e não por aspetos. O sistema de backend e bd ja estao operacionais!
 
 É necessário melhorar a performance do modelo antes de passar à próxima fase (fuzzy logic)
+
+- Prompt 1
+Quero adicionar o mapa de portugal para drill down por distritos na pagina principal. O que sugeres que use para o fazer. O mapa deve estar bem formatado e deve mostrar uma overview de todos os distritos com o numero de reviews e percentagem positiva negativa e neutra quando passar o rato por cima de cada um. O mapa nao deve ser suscetivel aos filtros de distritos apenas aos outros.
+
+- Prompt 2
+Preciso de melhorar a performance do modelo nomeadamente nos dados de treino. Preciso que adiciones ao dataset de treino final mais reviews nomeadamente com mais de 2 aspetos por review e termos de opiniao e termos aspeto com maiss de uma palavra que é o que esta a falhar no modelo neste momento. De seguida da me os passos para treinar o modelo desde o inicio e acrescenta esses passos numa secção do Readme
+
+- Prompt 3
+Preciso de implementar no modelo também um mecanismo para detetar ironias e negações.
+
+- Prompt 4 
+Preciso de melhorar a classificação das categorias de aspeto. Primeiro preciso de ter uma categoria chamada General para oss termos de aspeto que nao se encuadrarem em nenhuma das categorias pre selecionadas. De seguida preciso de implementar um fuzzy comparitor para que palavras semelhantes ou derivadas sejam corretaMENTE categorizadas (ex: serviço, servente etc...)
