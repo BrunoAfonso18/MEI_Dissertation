@@ -27,7 +27,15 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://user:password@postgres:5432/dw
-      MODEL_PATH:   /absa_module/absa_model_final_polarity
+      # /model_cache (dentro do próprio filesystem do container), não o
+      # bind mount ./absa_module: ler um model.safetensors recém-escrito no
+      # host através do bind mount Windows->WSL2 do Docker Desktop produz
+      # pesos incorretos sem erro (bytes idênticos por I/O simples - MD5
+      # confere - mas a leitura usada por transformers/safetensors carrega
+      # o modelo errado). Depois de treinar um modelo novo, correr:
+      #   docker cp absa_module/absa_model_final_polarity/. backend:/model_cache/
+      #   docker restart backend
+      MODEL_PATH:   /model_cache
     volumes:
       - ./backend:/app
       - ./absa_module:/absa_module:ro

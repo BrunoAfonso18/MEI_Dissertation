@@ -44,6 +44,7 @@ CATEGORY_LABELS = {
     "MENU_VARIETY": "Variedade do Menu",
     "CLEANLINESS": "Limpeza",
     "WAITING_TIME": "Tempo de Espera",
+    "GENERAL": "Geral",
 }
 
 CHART_LAYOUT = dict(

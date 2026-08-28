@@ -13,6 +13,8 @@ class AspectResult(BaseModel):
     sentiment_polarity: Optional[str]
     confidence: Optional[float]
     aspect_category: Optional[str]
+    negation_detected: Optional[bool] = False
+    irony_detected: Optional[bool] = False
 
     class Config:
         from_attributes = True

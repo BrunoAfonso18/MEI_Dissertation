@@ -32,7 +32,7 @@ O modelo não está a ter a performance esperada e o modelo utilizada pelo sent.
 Quero adicionar o mapa de portugal para drill down por distritos na pagina principal. O que sugeres que use para o fazer. O mapa deve estar bem formatado e deve mostrar uma overview de todos os distritos com o numero de reviews e percentagem positiva negativa e neutra quando passar o rato por cima de cada um. O mapa nao deve ser suscetivel aos filtros de distritos apenas aos outros.
 
 - Prompt 2
-Preciso de melhorar a performance do modelo nomeadamente nos dados de treino. Preciso que adiciones ao dataset de treino final mais reviews nomeadamente com mais de 2 aspetos por review e termos de opiniao e termos aspeto com maiss de uma palavra que é o que esta a falhar no modelo neste momento. De seguida da me os passos para treinar o modelo desde o inicio e acrescenta esses passos numa secção do Readme
+Preciso de melhorar a performance do modelo nomeadamente nos dados de treino. Preciso que adiciones ao dataset de treino final mais reviews nomeadamente com mais de 2 aspetos por review e termos de opiniao e termos aspeto com maiss de uma palavra que é o que esta a falhar no modelo neste momento. De seguida da me os passos para treinar o modelo desde o inicio e acrescenta esses passos numa secção do Readme. Preciso de implementar no modelo também um mecanismo para detetar ironias e negações.
 
 - Prompt 3
 Preciso de implementar no modelo também um mecanismo para detetar ironias e negações.

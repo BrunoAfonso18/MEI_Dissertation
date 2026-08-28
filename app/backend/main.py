@@ -37,6 +37,7 @@ from database.repository import (
 from models.extractor import AspectExtractor
 from models.category import CategoryClassifier
 from models.fuzzy_sentiment import fuzzy_analyzer, polarity_to_scores
+from models.linguistic_adjustments import adjust_polarity
 
 models = {}
 
@@ -95,6 +96,14 @@ def _analyse_text(text: str, restaurant_id: int, db: Session) -> tuple[int, list
         polarity   = polarities[i]  if i < len(polarities)  else "neutral"
         confidence = confidences[i] if i < len(confidences) else 0.5
 
+        # Correção heurística de negação/ironia: o classificador de token
+        # avalia o termo isoladamente e falha em casos como "não foi nada
+        # simpático" (negação) ou elogios sarcásticos ("ah, claro, o
+        # empregado foi *super* rápido..."). Ver models/linguistic_adjustments.py.
+        adjustment = adjust_polarity(text, aspect, opinion, polarity, confidence)
+        polarity   = adjustment["polarity"]
+        confidence = adjustment["confidence"]
+
         sentiment_raw = polarity_to_scores(polarity, confidence)
         fuzzy_result  = fuzzy_analyzer.analyze(sentiment_raw)
         category      = categories[i]
@@ -109,6 +118,8 @@ def _analyse_text(text: str, restaurant_id: int, db: Session) -> tuple[int, list
             "sentiment_polarity": fuzzy_result["sentiment_label"],
             "confidence":        fuzzy_result["defuzzified_score"],
             "aspect_category":   category,
+            "negation_detected": adjustment["negation_detected"],
+            "irony_detected":    adjustment["irony_detected"],
         }
         results.append(aspect_data)
 

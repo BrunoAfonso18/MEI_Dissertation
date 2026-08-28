@@ -86,7 +86,7 @@ RESTAURANTS = [
     {
         "id_restaurant": 10,
         "name": "Quinta da Palha",
-        "district": "Sintra",
+        "district": "Lisboa",
         "category": "Fine Dining",
         "address": "Estrada da Pena, 2, Sintra",
         "inspection_grade": "A+",
