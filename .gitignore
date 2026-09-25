@@ -5,6 +5,7 @@
 /app/absa_module/checkpoints
 /app/absa_module/absa_model_final
 /app/absa_module/absa_model_final_polarity
+/app/absa_module/absa_model_final_polarity_backup
 
 app/backend/absa_model_final
 

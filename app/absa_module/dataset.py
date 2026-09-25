@@ -4,12 +4,12 @@ from transformers import AutoTokenizer
 from sklearn.model_selection import train_test_split
 
 LABELS = [
-    "O", 
-    "B-ASP-pos", "I-ASP-pos", 
-    "B-ASP-neg", "I-ASP-neg", 
+    "O",
+    "B-ASP-pos", "I-ASP-pos",
+    "B-ASP-neg", "I-ASP-neg",
     "B-ASP-neu", "I-ASP-neu",
     "B-ASP-con", "I-ASP-con",
-    "B-OPN"
+    "B-OPN", "I-OPN",
 ]
 LABEL2ID = {l: i for i, l in enumerate(LABELS)}
 ID2LABEL = {i: l for l, i in LABEL2ID.items()}
