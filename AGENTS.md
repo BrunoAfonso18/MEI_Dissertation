@@ -59,6 +59,10 @@ DATABASE_URL=postgresql://user:password@postgres:5432/dw
 MODEL_PATH=./absa_model_final
 ```
 
+Optional: `BULK_MAX_WORKERS` (default `min(4, nº de CPUs)`) sets how many CSV
+rows `POST /reviews/upload` processes in parallel (thread pool, one DB session
+per thread).
+
 ## API Endpoints
 
 - `GET /restaurants` - List all registered restaurants

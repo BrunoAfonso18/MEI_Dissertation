@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime, date
 from database.models import (
     DimReview,
@@ -43,7 +44,13 @@ def _ensure_calendar(db: Session, dt: datetime) -> DimCalendar:
             year=date_key.year,
         )
         db.add(dim_cal)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            # Another thread (bulk CSV upload) inserted the same date in the
+            # meantime - use its row instead of failing the review.
+            db.rollback()
+            dim_cal = db.query(DimCalendar).filter(DimCalendar.date_id == date_key).one()
     return dim_cal
 
 

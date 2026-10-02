@@ -1,6 +1,8 @@
+import asyncio
 import io
 import os
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import asynccontextmanager
 from datetime import date, datetime
 
@@ -15,7 +17,7 @@ from schemas import (
     BulkUploadResponse,
     RestaurantResponse,
 )
-from database.connection import get_db
+from database.connection import get_db, SessionLocal
 from database.repository import (
     AnalyticsFilters,
     add_fact_sentiment,
@@ -43,6 +45,11 @@ models = {}
 
 
 MODEL_PATH = os.getenv("MODEL_PATH", "./absa_model_final")
+
+# Number of CSV rows processed at the same time by POST /reviews/upload.
+# Kept within SQLAlchemy's default connection pool (5 + 10 overflow), since
+# each worker holds one connection while processing its row.
+BULK_MAX_WORKERS = int(os.getenv("BULK_MAX_WORKERS", min(4, os.cpu_count() or 1)))
 
 
 @asynccontextmanager
@@ -72,11 +79,14 @@ def _analyse_text(text: str, restaurant_id: int, db: Session) -> tuple[int, list
     """
     now = datetime.now()
 
-    # 1. Create review dimension (auto-generated ID)
-    dim_review = create_dim_review(db, text=text, source="api", language="pt", created_at=now)
-
-    # 2. Ensure restaurant + calendar dimensions exist
+    # 1. Ensure restaurant + calendar dimensions exist. Done before creating
+    # the review, since create_dim_review commits immediately: an unknown
+    # restaurant_id would otherwise leave an orphan review (no facts) behind
+    # even though the row is reported as failed.
     load_or_create_dimensions(db, restaurant_id=restaurant_id, created_at=now)
+
+    # 2. Create review dimension (auto-generated ID)
+    dim_review = create_dim_review(db, text=text, source="api", language="pt", created_at=now)
 
     # 3. Extract aspects and opinions
     extracted = models["extractor"].predict(text)
@@ -188,13 +198,11 @@ async def get_recent_reviews(limit: int = 10, db: Session = Depends(get_db)):
 # ── Bulk CSV upload ────────────────────────────────────────────────
 
 @app.post("/reviews/upload", response_model=BulkUploadResponse)
-async def upload_reviews(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-):
+async def upload_reviews(file: UploadFile = File(...)):
     """
     Upload a CSV file with columns: restaurant_id, text.
-    All reviews are processed through the ABSA pipeline and saved to the DW.
+    All reviews are processed through the ABSA pipeline and saved to the DW,
+    BULK_MAX_WORKERS rows at a time (see _run_bulk).
     """
     if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="O ficheiro deve ser um CSV.")
@@ -212,30 +220,71 @@ async def upload_reviews(
             detail=f"O CSV deve ter as colunas: {required}. Encontradas: {set(df.columns)}",
         )
 
-    total     = len(df)
-    processed = 0
-    failed    = 0
-    errors    = []
+    # (CSV line number, restaurant_id, text) - line + 2 accounts for the
+    # header row and 1-based numbering, as shown to the user.
+    rows = [
+        (idx + 2, row["restaurant_id"], row["text"])
+        for idx, row in df.iterrows()
+    ]
 
-    for idx, row in df.iterrows():
-        try:
-            restaurant_id = int(row["restaurant_id"])
-            text          = str(row["text"]).strip()
-            if not text:
-                raise ValueError("Texto vazio")
-
-            _analyse_text(text, restaurant_id, db)
-            processed += 1
-        except Exception as e:
-            failed += 1
-            errors.append(f"Linha {idx + 2}: {e}")
+    # Run off the event loop so the API keeps answering other requests
+    # (dashboard, single reviews) while a large CSV is being processed.
+    processed, errors = await asyncio.to_thread(_run_bulk, rows)
 
     return BulkUploadResponse(
-        total=total,
+        total=len(rows),
         processed=processed,
-        failed=failed,
-        errors=errors[:20],  # cap error list to avoid huge responses
+        failed=len(errors),
+        errors=[f"Linha {line}: {msg}" for line, msg in errors[:20]],  # cap error list to avoid huge responses
     )
+
+
+def _process_bulk_row(restaurant_id, text) -> None:
+    """
+    Process one CSV row in a worker thread. A SQLAlchemy Session is not
+    thread-safe, so each row gets its own (connections come from the
+    engine's pool) instead of sharing the request's session.
+    """
+    if pd.isna(text) or not str(text).strip():
+        raise ValueError("Texto vazio")
+    restaurant_id = int(restaurant_id)
+    text = str(text).strip()
+
+    db = SessionLocal()
+    try:
+        _analyse_text(text, restaurant_id, db)
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+def _run_bulk(rows: list[tuple]) -> tuple[int, list[tuple[int, str]]]:
+    """
+    Process the CSV rows concurrently with a thread pool. Threads (rather
+    than processes) are enough here: the time per review is spent in torch
+    (which releases the GIL during the forward pass) and in round trips to
+    PostgreSQL (I/O), and threads share the already-loaded models instead
+    of loading a copy per process.
+    Returns (processed_count, [(line, error_message), ...] sorted by line).
+    """
+    processed = 0
+    errors    = []
+    with ThreadPoolExecutor(max_workers=BULK_MAX_WORKERS) as pool:
+        futures = {
+            pool.submit(_process_bulk_row, restaurant_id, text): line
+            for line, restaurant_id, text in rows
+        }
+        for future in as_completed(futures):
+            try:
+                future.result()
+                processed += 1
+            except Exception as e:
+                errors.append((futures[future], str(e)))
+
+    errors.sort()
+    return processed, errors
 
 
 # ── Analytics endpoints ───────────────────────────────────────────

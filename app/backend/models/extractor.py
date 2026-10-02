@@ -1,4 +1,5 @@
 import re
+import threading
 import torch
 import torch.nn.functional as F
 from transformers import AutoModelForTokenClassification, AutoTokenizer
@@ -23,23 +24,30 @@ class AspectExtractor:
         self.model     = AutoModelForTokenClassification.from_pretrained(model_path)
         self.model.eval()
         self.id2label  = self.model.config.id2label
+        # The Rust-backed "fast" tokenizer is not safe to call from several
+        # threads at once (it mutates its truncation state and raises
+        # "RuntimeError: Already borrowed"), which the bulk CSV upload does.
+        # Tokenizing is cheap, so only it is serialized; the forward pass
+        # itself is safe to run concurrently in eval/no_grad mode.
+        self._tokenizer_lock = threading.Lock()
 
     def predict(self, text: str) -> dict:
         words  = text.split()
-        inputs = self.tokenizer(
-            words,
-            return_tensors="pt",
-            is_split_into_words=True,
-            truncation=True,
-            max_length=128,
-        )
+        with self._tokenizer_lock:
+            inputs = self.tokenizer(
+                words,
+                return_tensors="pt",
+                is_split_into_words=True,
+                truncation=True,
+                max_length=128,
+            )
+            word_ids = inputs.word_ids()
         with torch.no_grad():
             outputs = self.model(**inputs)
 
         logits      = outputs.logits[0]                      # [seq_len, num_labels]
         probs       = F.softmax(logits, dim=-1)              # [seq_len, num_labels]
         predictions = logits.argmax(-1).tolist()
-        word_ids    = inputs.word_ids()
 
         aspects  = []
         opinions = []
