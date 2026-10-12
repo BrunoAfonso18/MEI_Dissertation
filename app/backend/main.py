@@ -38,8 +38,8 @@ from database.repository import (
 )
 from models.extractor import AspectExtractor
 from models.category import CategoryClassifier
-from models.fuzzy_sentiment import fuzzy_analyzer, polarity_to_scores
-from models.linguistic_adjustments import adjust_polarity
+from models.fuzzy_inference import score_aspect
+from models.linguistic_adjustments import detect_language
 
 models = {}
 
@@ -86,7 +86,7 @@ def _analyse_text(text: str, restaurant_id: int, db: Session) -> tuple[int, list
     load_or_create_dimensions(db, restaurant_id=restaurant_id, created_at=now)
 
     # 2. Create review dimension (auto-generated ID)
-    dim_review = create_dim_review(db, text=text, source="api", language="pt", created_at=now)
+    dim_review = create_dim_review(db, text=text, source="api", language=detect_language(text), created_at=now)
 
     # 3. Extract aspects and opinions
     extracted = models["extractor"].predict(text)
@@ -106,30 +106,25 @@ def _analyse_text(text: str, restaurant_id: int, db: Session) -> tuple[int, list
         polarity   = polarities[i]  if i < len(polarities)  else "neutral"
         confidence = confidences[i] if i < len(confidences) else 0.5
 
-        # Correção heurística de negação/ironia: o classificador de token
-        # avalia o termo isoladamente e falha em casos como "não foi nada
-        # simpático" (negação) ou elogios sarcásticos ("ah, claro, o
-        # empregado foi *super* rápido..."). Ver models/linguistic_adjustments.py.
-        adjustment = adjust_polarity(text, aspect, opinion, polarity, confidence)
-        polarity   = adjustment["polarity"]
-        confidence = adjustment["confidence"]
-
-        sentiment_raw = polarity_to_scores(polarity, confidence)
-        fuzzy_result  = fuzzy_analyzer.analyze(sentiment_raw)
-        category      = categories[i]
+        # Correções de negação/ironia (models/linguistic_adjustments.py) e
+        # sistema difuso de Mamdani que mede a intensidade da opinião a partir
+        # do léxico, do modificador de grau e da evidência do modelo
+        # (models/fuzzy_inference.py).
+        scored   = score_aspect(text, aspect, opinion, polarity, confidence)
+        category = categories[i]
 
         aspect_data = {
             "aspect_term":       aspect,
             "opinion_term":      opinion,
-            "pos_score":         fuzzy_result["positive_score"],
-            "neut_score":        fuzzy_result["neutral_score"],
-            "neg_score":         fuzzy_result["negative_score"],
-            "fuzzy_crisp_score": fuzzy_result["defuzzified_score"],
-            "sentiment_polarity": fuzzy_result["sentiment_label"],
-            "confidence":        fuzzy_result["defuzzified_score"],
+            "pos_score":         scored["positive_score"],
+            "neut_score":        scored["neutral_score"],
+            "neg_score":         scored["negative_score"],
+            "fuzzy_crisp_score": scored["crisp"],
+            "sentiment_polarity": scored["label"],
+            "confidence":        scored["certainty"],
             "aspect_category":   category,
-            "negation_detected": adjustment["negation_detected"],
-            "irony_detected":    adjustment["irony_detected"],
+            "negation_detected": scored["negation_detected"],
+            "irony_detected":    scored["irony_detected"],
         }
         results.append(aspect_data)
 
@@ -178,7 +173,7 @@ async def query(request: QueryRequest, db: Session = Depends(get_db)):
         restaurant_id=request.restaurant_id,
         text=request.text,
         source="api",
-        language="pt",
+        language=detect_language(request.text),
         created_at=datetime.now(),
         aspects=[AspectResult(**r) for r in results],
     )

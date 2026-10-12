@@ -6,6 +6,7 @@
 /app/absa_module/absa_model_final
 /app/absa_module/absa_model_final_polarity
 /app/absa_module/absa_model_final_polarity_backup
+/app/backend/models/data/
 
 app/backend/absa_model_final
 
@@ -20,3 +21,6 @@ app/checkpoints_polarity/
 app/.env
 venv
 /app/data
+# Backups locais do modelo e dataset PT anotado (não vão para o repositório)
+/backup
+/zips/absa_reviews_2014/Restaurants_PT_Train.csv

@@ -17,7 +17,7 @@ if str(_BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(_BACKEND_DIR))
 
 from models.extractor import AspectExtractor  # noqa: E402
-from models.fuzzy_sentiment import fuzzy_analyzer, polarity_to_scores  # noqa: E402
+from models.fuzzy_inference import label_for, score_aspect  # noqa: E402
 
 DEFAULT_MODEL_PATH = Path(__file__).resolve().parent.parent / "absa_module" / "absa_model_final_polarity"
 
@@ -51,31 +51,35 @@ class AbsaSentimentPipeline:
 
         extracted = self.extractor.predict(text)
         aspects = extracted["aspects"]
+        opinions = extracted["opinions"]
         polarities = extracted["polarities"]
         confidences = extracted["confidences"]
 
         if not aspects:
             return SentimentResult(positivity=0.0, label="neutral")
 
-        fuzzy_results = []
+        # Same per-aspect scoring as the backend (main.py), so the smiley shows
+        # exactly the value that is stored in the data warehouse.
+        scores = []
         aspect_sentiments = []
-        for aspect, polarity, confidence in zip(aspects, polarities, confidences):
-            raw_scores = polarity_to_scores(polarity or "neutral", confidence)
-            fuzzy_result = fuzzy_analyzer.analyze(raw_scores)
-            fuzzy_results.append(fuzzy_result)
+        for i, (aspect, polarity, confidence) in enumerate(zip(aspects, polarities, confidences)):
+            opinion = opinions[i] if i < len(opinions) else None
+            scored = score_aspect(text, aspect, opinion, polarity, confidence)
+            scores.append(scored["crisp"])
             aspect_sentiments.append(
                 AspectSentiment(
                     term=aspect,
-                    polarity=fuzzy_result["sentiment_label"],
-                    confidence=confidence,
+                    polarity=scored["label"],
+                    confidence=scored["certainty"],
                 )
             )
 
-        aggregated = fuzzy_analyzer.aggregate_aspects(fuzzy_results)
-        positivity = (aggregated["defuzzified_score"] - 0.5) * 2
+        # Review sentiment = simple mean of the aspects' intensities.
+        mean_score = sum(scores) / len(scores)
+        positivity = (mean_score - 0.5) * 2
 
         return SentimentResult(
             positivity=positivity,
-            label=aggregated["sentiment_label"],
+            label=label_for(mean_score),
             aspects=aspect_sentiments,
         )

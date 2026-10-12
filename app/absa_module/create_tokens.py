@@ -1,5 +1,7 @@
 """
-BIO dataset creation from SemEval 2014 ABSA datasets.
+BIO dataset creation from SemEval 2014 ABSA datasets (English) and from the
+Portuguese restaurant reviews annotated in the same format
+(Restaurants_PT_Train.csv).
 
 Key improvements over previous version:
   - Uses character offsets (from/to columns) instead of fragile string matching
@@ -8,6 +10,13 @@ Key improvements over previous version:
   - Combines Train + Trial splits for maximum data
   - Handles multiple aspects per sentence correctly
   - Outputs both bio_dataset.json (plain) and bio_dataset_polarity.json
+
+The Portuguese CSV follows the SemEval columns (id, Sentence, Aspect Term,
+polarity, from, to) plus the annotated opinion term of each aspect
+(Opinion Term, opinion_from, opinion_to), with one row per aspect-opinion
+pair. Its opinion terms are tagged from those character offsets; spaCy is
+only used to infer opinion terms for the English SemEval sentences, which
+have no opinion annotation.
 """
 
 import json
@@ -38,6 +47,8 @@ RESTAURANT_FILES = [
     DATA_DIR / "Restaurants_Train_v2.csv",
     DATA_DIR / "restaurants-trial.csv",
 ]
+
+PT_FILE = DATA_DIR / "Restaurants_PT_Train.csv"
 
 
 # ── Tokenisation preserving character positions ────────────────────
@@ -120,10 +131,24 @@ def _tag_opinion(words: list[str], labels: list[str], opinion_word: str) -> bool
     return False
 
 
-def build_bio_dataset(df: pd.DataFrame) -> tuple[list[dict], dict]:
+def _tag_opinion_span(tokens: list[tuple[str, int, int]], labels: list[str], opn_from: int, opn_to: int) -> bool:
+    """Place B-OPN / I-OPN on the words overlapping the character span [opn_from, opn_to)."""
+    idxs = [i for i, (_, ws, we) in enumerate(tokens) if ws < opn_to and we > opn_from]
+    if not idxs or not all(labels[i] == "O" for i in idxs):
+        return False
+    labels[idxs[0]] = "B-OPN"
+    for i in idxs[1:]:
+        labels[i] = "I-OPN"
+    return True
+
+
+def build_bio_dataset(df: pd.DataFrame, opinion_spans: dict | None = None) -> tuple[list[dict], dict]:
     """
     Build BIO-tagged records from a DataFrame that has:
         id, Sentence, Aspect Term, polarity, from, to
+    `opinion_spans` maps a sentence id to its annotated opinion character
+    spans [(from, to), ...] (Portuguese CSV); when it is None the opinion
+    term is inferred with spaCy (English SemEval).
     Returns (records, stats).
     """
     stats = Counter()
@@ -167,8 +192,15 @@ def build_bio_dataset(df: pd.DataFrame) -> tuple[list[dict], dict]:
 
             polarities.append({"Aspect Term": asp_text, "polarity": str(row["polarity"])})
 
+        if opinion_spans is not None:
+            # Annotated opinion terms: every one of them is tagged.
+            for opn_from, opn_to in opinion_spans.get(sid, []):
+                if _tag_opinion_span(tokens, labels, opn_from, opn_to):
+                    stats["opn_found"] += 1
+                else:
+                    stats["opn_missed"] += 1
         # Opinion term: one per sentence (first aspect that yields a candidate)
-        if _SPACY_OK:
+        elif _SPACY_OK:
             for _, row in group.iterrows():
                 opn = _find_opinion(sentence, str(row["Aspect Term"]))
                 if opn and _tag_opinion(words, labels, opn):
@@ -237,6 +269,26 @@ def main():
 
     # 3. Build BIO records
     bio_data, stats = build_bio_dataset(df_all)
+
+    # 3b. Portuguese reviews (same format + annotated opinion terms). One row
+    # per aspect-opinion pair: aspects are deduplicated before tagging and
+    # every annotated opinion span is tagged.
+    if not PT_FILE.exists():
+        raise FileNotFoundError(f"Ficheiro não encontrado: {PT_FILE}")
+    df_pt = pd.read_csv(PT_FILE, dtype={"id": str})
+    print(f"\n  Carregado {PT_FILE.name}: {len(df_pt)} linhas")
+    opn = df_pt.dropna(subset=["opinion_from", "opinion_to"])
+    opinion_spans = {}
+    for sid, o_from, o_to in zip(opn["id"], opn["opinion_from"], opn["opinion_to"]):
+        span = (int(o_from), int(o_to))
+        if span not in opinion_spans.setdefault(sid, []):
+            opinion_spans[sid].append(span)
+    df_pt = df_pt.drop_duplicates(subset=["id", "Sentence", "Aspect Term", "from", "to"])
+    print(f"Distribuição de polaridade (PT):\n{df_pt['polarity'].value_counts().to_string()}")
+    bio_pt, stats_pt = build_bio_dataset(df_pt, opinion_spans=opinion_spans)
+    bio_data += bio_pt
+    for k, v in stats_pt.items():
+        stats[f"pt_{k}"] += v
 
     has_asp = sum(1 for d in bio_data if any(l.startswith("B-ASP") for l in d["labels"]))
     has_opn = sum(1 for d in bio_data if "B-OPN" in d["labels"])
