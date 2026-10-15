@@ -38,7 +38,7 @@ from database.repository import (
 )
 from models.extractor import AspectExtractor
 from models.category import CategoryClassifier
-from models.fuzzy_inference import score_aspect
+from models.fuzzy_inference import IMPLICIT_ASPECT, IMPLICIT_CATEGORY, score_aspect, score_implicit
 from models.linguistic_adjustments import detect_language
 
 models = {}
@@ -135,6 +135,33 @@ def _analyse_text(text: str, restaurant_id: int, db: Session) -> tuple[int, list
             created_at=now,
             aspect_data=aspect_data,
         )
+
+    # Sem nenhum aspeto explícito ("Muito bom!"), a opinião global é inferida
+    # só pela camada difusa e guardada no aspeto implícito "geral" (GENERAL).
+    if not aspects:
+        scored = score_implicit(text)
+        if scored is not None:
+            aspect_data = {
+                "aspect_term":       IMPLICIT_ASPECT,
+                "opinion_term":      scored["opinion_phrase"],
+                "pos_score":         scored["positive_score"],
+                "neut_score":        scored["neutral_score"],
+                "neg_score":         scored["negative_score"],
+                "fuzzy_crisp_score": scored["crisp"],
+                "sentiment_polarity": scored["label"],
+                "confidence":        scored["certainty"],
+                "aspect_category":   IMPLICIT_CATEGORY,
+                "negation_detected": scored["negation_detected"],
+                "irony_detected":    scored["irony_detected"],
+            }
+            results.append(aspect_data)
+            add_fact_sentiment(
+                db,
+                review_id=dim_review.id_review,
+                restaurant_id=restaurant_id,
+                created_at=now,
+                aspect_data=aspect_data,
+            )
 
     db.commit()
     return dim_review.id_review, results

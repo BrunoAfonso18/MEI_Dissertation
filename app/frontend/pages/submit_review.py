@@ -268,7 +268,8 @@ def submit_bulk(contents, filename):
         resp = requests.post(
             f"{BACKEND_URL}/reviews/upload",
             files={"file": (filename, file_bytes, "text/csv")},
-            timeout=120,
+            # (ligação, leitura): CSVs grandes levam vários minutos no backend
+            timeout=(10, 1800),
         )
         resp.raise_for_status()
     except requests.RequestException as e:

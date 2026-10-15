@@ -16,6 +16,7 @@ centróide. A certeza (confiança do modelo após as correções de negação e
 ironia) é devolvida em separado e não entra no valor de S.
 """
 
+import re
 import threading
 
 import numpy as np
@@ -23,11 +24,28 @@ import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 
 from models.fuzzy_sentiment import fuzzy_analyzer
-from models.linguistic_adjustments import adjust_polarity, detect_language
+from models.linguistic_adjustments import (
+    _CLAUSE_BREAK_RE,
+    _CLAUSE_SPLIT_WORDS,
+    _normalize,
+    adjust_polarity,
+    detect_language,
+)
 from models.opinion_lexicon import opinion_features
 
 POSITIVE_THRESHOLD = 7 / 12   # S >= 0.583 -> positivo
 NEGATIVE_THRESHOLD = 5 / 12   # S <= 0.417 -> negativo
+
+# Aspeto implícito das avaliações sem nenhum aspeto explícito (score_implicit).
+IMPLICIT_ASPECT = "geral"
+IMPLICIT_CATEGORY = "GENERAL"
+IMPLICIT_CERTAINTY = 0.5      # sem evidência do modelo: leitura só lexical
+# Orações concessivas ("embora caro, …") são a ressalva e não a opinião principal.
+_CONCESSIVE = {
+    "pt": {"embora", "apesar", "ainda que", "mesmo que"},
+    "en": {"although", "though", "despite", "even though"},
+}
+_GLUED_PUNCT_RE = re.compile(r"([.,;:!?])(?=[^\s.,;:!?])")
 
 
 def _build_system() -> ctrl.ControlSystemSimulation:
@@ -167,4 +185,63 @@ def score_aspect(
         "modifier": features["modifier"],
         "evidence": evidence,
         "fallback": features["fallback"],
+    }
+
+
+def _clauses(text: str, language: str) -> list[str]:
+    """Orações do texto, cortadas como em _local_clause (pontuação forte, vírgulas e conjunções)."""
+    split_words = _CLAUSE_SPLIT_WORDS[language]
+    clauses, current = [], []
+    for word in _GLUED_PUNCT_RE.sub(r"\1 ", text).split():
+        if current and _normalize(word) in split_words:
+            clauses.append(current)
+            current = []
+        current.append(word)
+        if _CLAUSE_BREAK_RE.search(word) or "," in word:
+            clauses.append(current)
+            current = []
+    if current:
+        clauses.append(current)
+    return [" ".join(c) for c in clauses]
+
+
+def score_implicit(text: str) -> dict | None:
+    """
+    Opinião global de uma avaliação sem nenhum aspeto explícito ("Muito bom!"),
+    atribuída ao aspeto implícito IMPLICIT_ASPECT da categoria GENERAL.
+
+    Sem evidência do modelo (E = 0), a direção e a intensidade vêm só do
+    léxico: em cada oração não concessiva procura-se a palavra de opinião
+    (com o seu modificador e negação) e S é a média das orações com opinião.
+    A regra de ironia não é aplicada, por não haver polaridade do modelo a
+    inverter. Devolve None se nenhuma oração tiver palavra do léxico.
+    """
+    language = detect_language(text)
+    concessive = _CONCESSIVE[language]
+    scored = []
+    for clause in _clauses(text, language):
+        first = [_normalize(w) for w in clause.split()[:2]]
+        if first and (first[0] in concessive or " ".join(first) in concessive):
+            continue
+        features = opinion_features(clause, "", None, 0.0, language)
+        if features["fallback"]:
+            continue
+        scored.append((infer(features["valence"], features["modifier"], 0.0), features))
+    if not scored:
+        return None
+
+    crisp = sum(s for s, _ in scored) / len(scored)
+    strongest = max((f for _, f in scored), key=lambda f: abs(f["valence"]))
+    return {
+        "crisp": crisp,
+        "label": label_for(crisp),
+        "certainty": IMPLICIT_CERTAINTY,
+        **_memberships(crisp),
+        "negation_detected": any(f["negated"] for _, f in scored),
+        "irony_detected": False,
+        "valence": strongest["valence"],
+        "modifier": strongest["modifier"],
+        "evidence": 0.0,
+        "fallback": False,
+        "opinion_phrase": strongest["opinion_phrase"],
     }

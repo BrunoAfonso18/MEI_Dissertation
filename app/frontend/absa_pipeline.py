@@ -17,7 +17,7 @@ if str(_BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(_BACKEND_DIR))
 
 from models.extractor import AspectExtractor  # noqa: E402
-from models.fuzzy_inference import label_for, score_aspect  # noqa: E402
+from models.fuzzy_inference import IMPLICIT_ASPECT, label_for, score_aspect, score_implicit  # noqa: E402
 
 DEFAULT_MODEL_PATH = Path(__file__).resolve().parent.parent / "absa_module" / "absa_model_final_polarity"
 
@@ -56,7 +56,16 @@ class AbsaSentimentPipeline:
         confidences = extracted["confidences"]
 
         if not aspects:
-            return SentimentResult(positivity=0.0, label="neutral")
+            # Mesma opinião global que o backend guarda no aspeto implícito "geral".
+            implicit = score_implicit(text)
+            if implicit is None:
+                return SentimentResult(positivity=0.0, label="neutral")
+            return SentimentResult(
+                positivity=(implicit["crisp"] - 0.5) * 2,
+                label=implicit["label"],
+                aspects=[AspectSentiment(term=IMPLICIT_ASPECT, polarity=implicit["label"],
+                                         confidence=implicit["certainty"])],
+            )
 
         # Same per-aspect scoring as the backend (main.py), so the smiley shows
         # exactly the value that is stored in the data warehouse.

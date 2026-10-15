@@ -191,6 +191,7 @@ def opinion_features(
         "valence": max(-1.0, min(1.0, valence)),
         "modifier": modifier,
         "opinion_word": _key(word),
+        "opinion_phrase": word.strip(".,;:!?…\"'“”()"),
         "fallback": False,
         "negated": negated,
     }
